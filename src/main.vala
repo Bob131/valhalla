@@ -99,6 +99,10 @@ class valhalla : Application {
                 stderr.printf("Deleted: %s\n", string.joinv(", ", rnames));
                 return 0;
             }
+        } else if (args[0] == "--list" || args[0] == "-l") {
+            foreach (var entry in database->exec("SELECT * FROM Files")) {
+                stdout.printf(@"$(entry.get("remote_filename"))\n");
+            }
         } else if (args[0] == "--help" || args[0] == "-h") {
             stderr.printf("usage: valhalla [-f] [FILES]\n");
             stderr.printf("       valhalla -s\n");
@@ -110,6 +114,7 @@ class valhalla : Application {
             stderr.printf("  -s, --screenshot\tCapture screenshot for upload\n");
             stderr.printf("  -f, --find\t\tFind files by hash\n");
             stderr.printf("  -d, --delete\t\tDelete files by hash\n");
+            stderr.printf("  -l  --list\t\tList all indexed remote filenames\n");
             stderr.printf("\n");
             stderr.printf("FILES may be - for stdin (launches EDITOR if no input) or a list of space-\n");
             stderr.printf("separated files\n");
