@@ -79,9 +79,15 @@ class valhalla : Application {
         } else if (args[0] == "--delete" || args[0] == "-d") {
             args = args[1:args.length]; // remove the switch
             foreach (string? arg in args) {
+                var oarg = arg;
                 arg = utils.checksum_from_arg(arg);
                 if (arg == null) {
-                    stderr.printf(@"File '$(arg)' not found\n");
+                    if (database->contains(oarg)) {
+                        utils.delete_file(oarg);
+                        stdout.printf("Deleted: %s\n", oarg);
+                        continue;
+                    }
+                    stderr.printf(@"File '$(oarg)' not found\n");
                     return 1;
                 }
                 var r = database->exec("SELECT * FROM Files WHERE checksum = $CS", {arg});
@@ -89,14 +95,13 @@ class valhalla : Application {
                     stderr.printf(@"No files matching checksum 0x$(arg)\n");
                     continue;
                 }
-                mount = new utils.Mount();
                 string[] rnames = {};
                 foreach (var entry in r) {
                     var name = entry.get("remote_filename");
-                    GLib.File.new_for_path(GLib.Path.build_filename(mount->location, name)).delete();
+                    utils.delete_file(name);
                     rnames += name;
                 }
-                stderr.printf("Deleted: %s\n", string.joinv(", ", rnames));
+                stdout.printf("Deleted: %s\n", string.joinv(", ", rnames));
                 return 0;
             }
         } else if (args[0] == "--list" || args[0] == "-l") {

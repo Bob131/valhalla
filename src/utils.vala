@@ -128,6 +128,15 @@ namespace utils {
     }
 
 
+    public void delete_file(string filename) {
+        if (!_mount_instantiated) {
+            mount = new Mount();
+        }
+        database->exec("DELETE FROM Files WHERE remote_filename = $FN", {filename});
+        GLib.File.new_for_path(GLib.Path.build_filename(mount->location, filename)).delete();
+    }
+
+
     public string? upload_file(GLib.File file) {
         var cs = utils.files.get_checksum(file);
         var dest_filename = settings.get_string("naming-scheme").replace("$c", cs);
