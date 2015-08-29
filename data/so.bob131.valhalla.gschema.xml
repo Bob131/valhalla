@@ -1,0 +1,69 @@
+<schemalist>
+    <schema id="so.bob131.valhalla" path="/so/bob131/valhalla/" gettext-domain="valhalla">
+        <key name="serve-url" type="s">
+            <default>""</default>
+            <summary>Cached file serve URL</summary>
+            <description>
+                Stores where the currently configured provider serves files from
+            </description>
+        </key>
+
+        <key name="mount-command" type="s">
+            <default>""</default>
+            <summary>Command to mount the remote target</summary>
+            <description>
+                A one-liner that gets passed to /bin/sh to execute with
+                the intention of mounting the target remote folder.
+                Add in $f so valhalla knows where to substitute a local
+                folder in as an argument.
+            </description>
+        </key>
+
+        <key name="unmount-command" type="s">
+            <default>"fusermount -zu $f"</default>
+            <summary>Command to unmount the remote target</summary>
+            <description>
+                A one-liner that gets passed to /bin/sh to execute with
+                the intention of unmounting the previously mounted remote
+                folder. Set this to "" to disable auto-unmount.
+                Add in $f so valhalla knows where to substitue a local
+                folder in as an argument.
+            </description>
+        </key>
+
+        <key name="naming-scheme" type="s">
+            <default>"$c$e"</default>
+            <summary>Defines how remote files should be named</summary>
+            <description>
+                Valhalla will copy files to their destination with the
+                format specified in this field. Special meaning is given
+                to the following sequences:
+                  * $c - Adler32 checksum of the file
+                  * $f - Original file name
+                  * $e - Detected file extension
+                You can also add in dates, see strftime(1) for details.
+            </description>
+        </key>
+
+        <key name="temp-names" type="s">
+            <default>"valhalla_%Y-%m-%d_%H-%M-%S"</default>
+            <summary>Filename format for temporary files</summary>
+            <description>
+                Describes the format for newly created files like
+                screenshots and data piped in on the command line. See
+                strftime(1) for more details.
+            </description>
+        </key>
+
+        <key name="track-remote" type="b">
+            <default>true</default>
+            <summary>Track checksums in remote mount</summary>
+            <description>
+                When mounting the remote folder, create an index of
+                remote checksums and filenames. This allows valhalla to
+                include already existing files in checks for file
+                duplication etc before upload.
+            </description>
+        </key>
+    </schema>
+</schemalist>

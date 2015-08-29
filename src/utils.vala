@@ -1,0 +1,174 @@
+namespace utils {
+    errordomain error {
+        SQLITE_ERROR
+    }
+
+
+    class Database : GLib.Object {
+        private Sqlite.Database db;
+
+        construct {
+            Sqlite.Database.open_v2(utils.config.path("files.db"), out db);
+            db.exec("""CREATE TABLE IF NOT EXISTS Files (
+                        date STRING DEFAULT CURRENT_TIMESTAMP,
+                        checksum STRING,
+                        local_filename STRING,
+                        remote_filename STRING UNIQUE NOT NULL ON CONFLICT FAIL);""");
+        }
+
+        public GLib.HashTable<string, string>[]? exec(string query, string[] args = {}) throws utils.error {
+            Sqlite.Statement stmt;
+            int ec = db.prepare_v2(query, query.length, out stmt);
+            if (ec != Sqlite.OK) {
+                throw new utils.error.SQLITE_ERROR(db.errmsg());
+            }
+            for (var i=0;i<args.length;i++) {
+                stmt.bind_text(i+1, args[i]);
+            }
+            GLib.HashTable<string, string>[] r = {};
+            var columns = stmt.column_count();
+            while (stmt.step() == Sqlite.ROW) {
+                var hs = new GLib.HashTable<string, string>(str_hash, str_equal);
+                for (var i=0;i<columns;i++) {
+                    if (stmt.column_text(i) != null && stmt.column_text(i) != "") {
+                        hs.insert(stmt.column_name(i), stmt.column_text(i));
+                    }
+                }
+                r += hs;
+            }
+            if (r.length == 0) {
+                return null;
+            }
+            return r;
+        }
+
+        public bool contains(string needle) {
+            var test = exec("SELECT * FROM Files WHERE remote_filename = $FN", {needle});
+            if (test == null) {
+                return false;
+            }
+            return true;
+        }
+    }
+
+
+    class Mount : GLib.Object {
+        private string _location = GLib.Path.build_filename(Environment.get_tmp_dir(), "valhalla_temp_mount");
+        public string location {get {return _location;}}
+
+        construct {
+            _mount_instantiated = true;
+            stderr.printf("Mounting remote filesystem...\r");
+            Posix.mkdir(location, 0700);
+            var cmd = settings.get_string("mount-command").replace("$f", location);
+            var p = new GLib.Subprocess.newv({"/bin/sh", "-c", cmd}, GLib.SubprocessFlags.INHERIT_FDS);
+            p.wait();
+
+            stderr.printf("Updating local file index... \r");
+            var dir = GLib.Dir.open(location);
+            string? name;
+            string[] names = {};
+            while ((name = dir.read_name()) != null) {
+                var full_path = GLib.Path.build_filename(location, name);
+                if (GLib.FileUtils.test(full_path, GLib.FileTest.IS_DIR|GLib.FileTest.IS_SYMLINK)) {
+                    continue;
+                }
+                names += name;
+            }
+            for (var i=0;i<names.length;i++) {
+                name = names[i];
+                if (!(database->contains(name))) {
+                    string? cs = null;
+                    if (/[0-9a-f]{8}/.match((cs = name.split(".")[0]))) {
+                        // assume it's one of our files and we know its checksum
+                    } else {
+                        // otherwise reset
+                        cs = null;
+                    }
+                    if (settings.get_boolean("track-remote")) {
+                        var full_path = GLib.Path.build_filename(location, name);
+                        cs = utils.files.get_checksum(GLib.File.new_for_path(full_path));
+                    }
+                    database->exec("INSERT INTO Files (checksum, remote_filename) VALUES ($cs, $rf)", {cs, name});
+                    stderr.printf(@"Updating local file index... ($(i)/$(names.length))\r");
+                }
+            }
+            foreach (var record in database->exec("SELECT * FROM Files")) {
+                if (!(record.get("remote_filename") in names)) {
+                    database->exec("DELETE FROM Files WHERE remote_filename = $FN", {record.get("remote_filename")});
+                }
+            }
+            // clear line
+            stderr.printf("%c[2K\r", 27);
+        }
+
+        ~Mount() {
+            string unmount;
+            if ((unmount = settings.get_string("unmount-command")) != "") {
+                new GLib.Subprocess.newv({"/bin/sh", "-c", unmount.replace("$f", location)},
+                        GLib.SubprocessFlags.INHERIT_FDS).wait();
+                Posix.rmdir(location);
+            }
+        }
+    }
+
+
+    public string? checksum_from_arg(owned string arg) {
+        var file = GLib.File.new_for_commandline_arg(arg);
+        if (file.query_exists()) {
+            arg = utils.files.get_checksum(file);
+        }
+        if (arg.length == 8 || (arg.length == 10 && arg[0:2] == "0x")) {
+            if (arg.length == 10) {
+                arg = arg[2:arg.length];
+            }
+            return arg;
+        }
+        return null;
+    }
+
+
+    public string? upload_file(GLib.File file) {
+        var cs = utils.files.get_checksum(file);
+        var dest_filename = settings.get_string("naming-scheme").replace("$c", cs);
+        dest_filename = dest_filename.replace("$f", file.get_basename());
+        dest_filename = dest_filename.replace("$e", utils.files.get_extension(file));
+        dest_filename = GLib.Time.gm(time_t()).format(dest_filename);
+
+        mount = new Mount();
+
+        HashTable<string, string>[]? results;
+        bool? all_go_for_launch = null;
+        // check for duplicates
+        if ((results = database->exec("SELECT * FROM Files WHERE checksum = $CS", {cs})) != null) {
+            all_go_for_launch = utils.cli.overwrite_prompt("Duplicate file detected!", results, "Continue?");
+        }
+        // check for collisions
+        if ((results = database->exec("SELECT * FROM Files WHERE remote_filename = $RF", {dest_filename})) != null &&
+                all_go_for_launch == null) {
+            all_go_for_launch = utils.cli.overwrite_prompt("Filename collision detected!", results, "Overwrite?");
+        }
+        if (all_go_for_launch == false) {
+            return null;
+        }
+
+        var meter = new utils.cli.progress(file.get_basename());
+        meter.update();
+        file.copy(GLib.File.new_for_path(GLib.Path.build_filename(mount->location, dest_filename)),
+                GLib.FileCopyFlags.OVERWRITE|GLib.FileCopyFlags.NOFOLLOW_SYMLINKS, null, (current, total) => {
+            meter.update(current, total);
+        });
+        GLib.FileUtils.chmod(GLib.Path.build_filename(mount->location, dest_filename), 0644);
+        meter.clear();
+
+        database->exec("DELETE FROM Files WHERE remote_filename = $FN", {dest_filename});
+        database->exec("""INSERT INTO Files (checksum, local_filename, remote_filename)
+                            VALUES ($cs, $lf, $rf);""", {cs, file.get_basename(), dest_filename});
+
+        var url = settings.get_string("serve-url");
+        if (url[url.length] != '/') {
+            url += "/";
+        }
+        return @"$(url)$(dest_filename)";
+    }
+}
