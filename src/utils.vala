@@ -57,14 +57,25 @@ namespace utils {
         public string location {get {return _location;}}
 
         construct {
+            utils.ui.put_text("Mounting remote filesystem...");
+            bool waiting_on_cmd = true;
+            ThreadFunc<void*> pulse = () => {
+                while (waiting_on_cmd) {
+                    utils.ui.put_text(null);
+                    Thread.usleep(500000);
+                }
+            };
+            var t = new Thread<void*>(null, pulse);
+
             _mount_instantiated = true;
-            stderr.printf("Mounting remote filesystem...\r");
             Posix.mkdir(location, 0700);
             var cmd = settings.get_string("mount-command").replace("$f", location);
             var p = new GLib.Subprocess.newv({"/bin/sh", "-c", cmd}, GLib.SubprocessFlags.INHERIT_FDS);
             p.wait();
+            waiting_on_cmd = false;
+            t.join();
 
-            stderr.printf("Updating local file index... \r");
+            utils.ui.put_text("Updating local file index... ");
             var dir = GLib.Dir.open(location);
             string? name;
             string[] names = {};
@@ -90,7 +101,7 @@ namespace utils {
                         cs = utils.files.get_checksum(GLib.File.new_for_path(full_path));
                     }
                     database->exec("INSERT INTO Files (checksum, remote_filename) VALUES ($cs, $rf)", {cs, name});
-                    stderr.printf(@"Updating local file index... ($(i)/$(names.length))\r");
+                    utils.ui.put_text(@"Updating local file index... ($(i)/$(names.length))");
                 }
             }
             foreach (var record in database->exec("SELECT * FROM Files")) {
@@ -146,22 +157,29 @@ namespace utils {
 
         mount = new Mount();
 
-        HashTable<string, string>[]? results;
-        bool? all_go_for_launch = null;
-        // check for duplicates
-        if ((results = database->exec("SELECT * FROM Files WHERE checksum = $CS", {cs})) != null) {
-            all_go_for_launch = utils.cli.overwrite_prompt("Duplicate file detected!", results, "Continue?");
-        }
-        // check for collisions
-        if ((results = database->exec("SELECT * FROM Files WHERE remote_filename = $RF", {dest_filename})) != null &&
-                all_go_for_launch == null) {
-            all_go_for_launch = utils.cli.overwrite_prompt("Filename collision detected!", results, "Overwrite?");
-        }
-        if (all_go_for_launch == false) {
-            return null;
+        if (!utils.ui.is_gtk()) {
+            HashTable<string, string>[]? results;
+            bool? all_go_for_launch = null;
+            // check for duplicates
+            if ((results = database->exec("SELECT * FROM Files WHERE checksum = $CS", {cs})) != null) {
+                all_go_for_launch = utils.ui.overwrite_prompt("Duplicate file detected!", results, "Continue?");
+            }
+            // check for collisions
+            if ((results = database->exec("SELECT * FROM Files WHERE remote_filename = $RF", {dest_filename})) != null &&
+                    all_go_for_launch == null) {
+                all_go_for_launch = utils.ui.overwrite_prompt("Filename collision detected!", results, "Overwrite?");
+            }
+            if (all_go_for_launch == false) {
+                return null;
+            }
         }
 
-        var meter = new utils.cli.progress(file.get_basename());
+        utils.ui.BaseProgress meter;
+        if (utils.ui.is_gtk()) {
+            meter = new utils.ui.gtk_progress();
+        } else {
+            meter = new utils.ui.progress(file.get_basename());
+        }
         meter.update();
         file.copy(GLib.File.new_for_path(GLib.Path.build_filename(mount->location, dest_filename)),
                 GLib.FileCopyFlags.OVERWRITE|GLib.FileCopyFlags.NOFOLLOW_SYMLINKS, null, (current, total) => {
@@ -179,5 +197,19 @@ namespace utils {
             url += "/";
         }
         return @"$(url)$(dest_filename)";
+    }
+
+
+    public async string? upload_file_async(GLib.File file) {
+        string? output = null;
+        SourceFunc cb = upload_file_async.callback;
+        ThreadFunc<void*> run = () => {
+            output = upload_file(file);
+            Idle.add((owned) cb);
+            return null;
+        };
+        new Thread<void*>(null, run);
+        yield;
+        return output;
     }
 }

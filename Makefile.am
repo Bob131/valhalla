@@ -1,1 +1,1 @@
-SUBDIRS	= src data
+SUBDIRS	= data src

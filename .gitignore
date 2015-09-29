@@ -9,8 +9,10 @@ gschemas.compiled
 /*.rej
 /*.tab.c
 /*~
-/.*.sw[nop]
+.*.sw*
 /.dirstamp
+/src/*.stamp*
+/src/gvalhalla
 /GPATH
 /GRTAGS
 /GSYMS
@@ -51,3 +53,4 @@ gschemas.compiled
 /m4
 /src/*.c
 !/src/utils-c.c
+/data/*.c

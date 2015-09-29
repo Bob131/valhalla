@@ -1,4 +1,9 @@
-namespace utils.cli {
+namespace utils.ui {
+    public bool is_gtk() {
+        return Application.get_default() is Gtk.Application;
+    }
+
+
     public string prompt(string text, string? default_value = null) {
         var resp = Readline.readline(text);
         if (resp == "" || resp == null) {
@@ -31,7 +36,55 @@ namespace utils.cli {
     }
 
 
-    class progress {
+    private Gtk.ProgressBar get_progressbar() {
+        var notebook = (Application.get_default() as Gtk.Application).active_window.get_child() as Gtk.Notebook;
+        var box = notebook.get_nth_page(1) as Gtk.Box;
+        return box.get_children().nth_data(0) as Gtk.ProgressBar;
+    }
+
+
+    public void put_text(string? text) {
+        if (is_gtk()) {
+            var pg = get_progressbar();
+            if (text != null) {
+                pg.text = text;
+            }
+            pg.pulse();
+        } else {
+            if (text != null) {
+                stderr.printf(@"$(text)\r");
+            }
+        }
+    }
+
+
+    abstract class BaseProgress {
+        public abstract void update(int64 current = 0, int64 total = 1);
+        public abstract void clear();
+    }
+
+
+    class gtk_progress : BaseProgress {
+        private Gtk.ProgressBar progress;
+
+        public gtk_progress() {
+            this.progress = get_progressbar();
+        }
+
+        public override void update(int64 current = 0, int64 total = 1) {
+            double percent = current/(float)total;
+            this.progress.set_fraction(percent);
+            this.progress.text = @"$(Math.floor(percent*100))%";
+        }
+
+        public override void clear() {
+            this.progress.set_fraction(1);
+            this.progress.text = "Complete!";
+        }
+    }
+
+
+    class progress : BaseProgress {
         private int screen_width;
         private string filename;
         extern int get_width();
@@ -89,7 +142,7 @@ namespace utils.cli {
             return formatted;
         }
 
-        public void update(int64 current = 0, int64 total = 1) {
+        public override void update(int64 current = 0, int64 total = 1) {
             if (isatty()) {
                 double percent = Math.floor(current/(float)total*100);
                 if (percent > 100) {
@@ -134,7 +187,7 @@ namespace utils.cli {
             }
         }
 
-        public void clear() {
+        public override void clear() {
             string whitespace = "";
             while (whitespace.length < screen_width) {
                 whitespace += " ";

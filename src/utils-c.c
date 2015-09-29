@@ -4,7 +4,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-int utils_cli_progress_get_width() {
+int utils_ui_progress_get_width() {
     struct winsize ws;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws);
     return ws.ws_col;
