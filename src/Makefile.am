@@ -33,11 +33,8 @@ valhalla_VALAFLAGS = \
 	--gresources $(top_srcdir)/data/so.bob131.valhalla.gresources.xml
 
 valhalla_LDADD = \
-	-lreadline -ltermcap \
 	-lm \
-	-lz \
 	-lmagic \
-	-lsqlite3 \
 	$(valhalla_U_LIBS)
 
 

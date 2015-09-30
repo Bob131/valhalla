@@ -12,6 +12,8 @@ dnl ###########################################################################
 dnl Dependencies
 dnl ###########################################################################
 
+AX_LIB_READLINE
+
 GLIB_REQUIRED=2.38.0
 GOBJ_REQUIRED=2.0.0
 GIO_REQUIRED=2.0.0
@@ -23,6 +25,7 @@ PKG_CHECK_MODULES(valhalla_U, [
   gdk-3.0
   gtk+-3.0
   sqlite3
+  zlib
 ])
 
 AC_SUBST([GLIB_REQUIRED])
