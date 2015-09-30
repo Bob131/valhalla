@@ -1,4 +1,12 @@
 <interface>
+    <object class="GtkSizeGroup">
+        <property name="mode">GTK_SIZE_GROUP_HORIZONTAL</property>
+        <widgets>
+            <widget name="cancel_button"/>
+            <widget name="continue_button"/>
+        </widgets>
+    </object>
+
     <template class="MainWindow" parent="GtkApplicationWindow">
         <property name="visible">True</property>
         <property name="window_position">center</property>
@@ -14,10 +22,9 @@
                         <property name="transition_type">crossfade</property>
                         <property name="reveal_child">True</property>
                         <child>
-                            <object class="GtkButton">
+                            <object class="GtkButton" id="cancel_button">
                                 <property name="visible">True</property>
                                 <property name="label">Cancel</property>
-                                <property name="width_request">75</property>
                                 <signal name="clicked" handler="cancel"/>
                                 <style>
                                     <class name="destructive-action"/>
@@ -30,7 +37,6 @@
                     <object class="GtkButton" id="continue_button">
                         <property name="visible">True</property>
                         <property name="label">Continue</property>
-                        <property name="width_request">75</property>
                         <signal name="clicked" handler="continue"/>
                         <style>
                             <class name="suggested-action"/>
