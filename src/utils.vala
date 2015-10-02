@@ -1,11 +1,12 @@
 namespace utils {
-    errordomain error {
-        SQLITE_ERROR
+    public errordomain WriteError {
+        RESERVED_FILENAME
     }
 
 
     class Database : GLib.Object {
         private Sqlite.Database db;
+        private Sqlite.Statement* stmt;
 
         construct {
             Sqlite.Database.open_v2(utils.config.path("files.db"), out db);
@@ -16,26 +17,27 @@ namespace utils {
                         remote_filename STRING UNIQUE NOT NULL ON CONFLICT FAIL);""");
         }
 
-        public GLib.HashTable<string, string>[]? exec(string query, string[] args = {}) throws utils.error {
-            Sqlite.Statement stmt;
-            int ec = db.prepare_v2(query, query.length, out stmt);
-            if (ec != Sqlite.OK) {
-                throw new utils.error.SQLITE_ERROR(db.errmsg());
-            }
+        public GLib.HashTable<string, string>[]? exec(string query, string[] args = {}) 
+            requires (db.prepare_v2(query, query.length, out stmt) == Sqlite.OK)
+        {
             for (var i=0;i<args.length;i++) {
-                stmt.bind_text(i+1, args[i]);
+                stmt->bind_text(i+1, args[i]);
             }
+
             GLib.HashTable<string, string>[] r = {};
-            var columns = stmt.column_count();
-            while (stmt.step() == Sqlite.ROW) {
+            var columns = stmt->column_count();
+            while (stmt->step() == Sqlite.ROW) {
                 var hs = new GLib.HashTable<string, string>(str_hash, str_equal);
                 for (var i=0;i<columns;i++) {
-                    if (stmt.column_text(i) != null && stmt.column_text(i) != "") {
-                        hs.insert(stmt.column_name(i), stmt.column_text(i));
+                    if (stmt->column_text(i) != null && stmt->column_text(i) != "") {
+                        hs.insert(stmt->column_name(i), stmt->column_text(i));
                     }
                 }
                 r += hs;
             }
+
+            delete stmt; // clean up for next run
+
             if (r.length == 0) {
                 return null;
             }
@@ -53,27 +55,37 @@ namespace utils {
 
 
     class Mount : GLib.Object {
-        private string _location = GLib.Path.build_filename(Environment.get_tmp_dir(), "valhalla_temp_mount");
-        public string location {get {return _location;}}
+        public string location;
+
 
         construct {
+            this.location = GLib.Path.build_filename(Environment.get_tmp_dir(), "valhalla_temp_mount");
+
             utils.ui.put_text("Mounting remote filesystem...");
-            bool waiting_on_cmd = true;
-            ThreadFunc<void*> pulse = () => {
-                while (waiting_on_cmd) {
-                    utils.ui.put_text(null);
-                    Thread.usleep(500000);
-                }
-            };
-            var t = new Thread<void*>(null, pulse);
+
+            bool waiting_on_cmd;
+            Thread<void*> t;
+            if (utils.ui.is_gtk()) {
+                waiting_on_cmd = true;
+                ThreadFunc<void*> pulse = () => {
+                    while (waiting_on_cmd) {
+                        utils.ui.put_text(null);
+                        Thread.usleep(500000);
+                    }
+                };
+                t = new Thread<void*>(null, pulse);
+            }
 
             _mount_instantiated = true;
             Posix.mkdir(location, 0700);
             var cmd = settings.get_string("mount-command").replace("$f", location);
             var p = new GLib.Subprocess.newv({"/bin/sh", "-c", cmd}, GLib.SubprocessFlags.INHERIT_FDS);
             p.wait();
-            waiting_on_cmd = false;
-            t.join();
+
+            if (utils.ui.is_gtk()) {
+                waiting_on_cmd = false;
+                t.join();
+            }
 
             utils.ui.put_text("Updating local file index... ");
             var dir = GLib.Dir.open(location);
@@ -114,8 +126,8 @@ namespace utils {
         }
 
         ~Mount() {
-            string unmount;
-            if ((unmount = settings.get_string("unmount-command")) != "") {
+            string unmount = settings.get_string("unmount-command");
+            if (unmount != "") {
                 new GLib.Subprocess.newv({"/bin/sh", "-c", unmount.replace("$f", location)},
                         GLib.SubprocessFlags.INHERIT_FDS).wait();
                 Posix.rmdir(location);
@@ -148,7 +160,7 @@ namespace utils {
     }
 
 
-    public string? upload_file(GLib.File file) {
+    public string? upload_file(GLib.File file) throws WriteError {
         var cs = utils.files.get_checksum(file);
         var dest_filename = settings.get_string("naming-scheme").replace("$c", cs);
         dest_filename = dest_filename.replace("$f", file.get_basename());
