@@ -95,10 +95,12 @@ class valhalla : Application {
                 stdout.printf(@"$(entry.get("remote_filename"))\n");
             }
         } else if (args[0] == "--help" || args[0] == "-h") {
-            stderr.printf("usage: valhalla [-f] [FILES]\n");
+            stderr.printf("usage: valhalla [FILES]\n");
+            stderr.printf("       valhalla [-f | -d] [FILE or HASH]...\n");
             stderr.printf("       valhalla -s\n");
+            stderr.printf("       valhalla -l\n");
             stderr.printf("\n");
-            stderr.printf("Commandline Empyrean client\n");
+            stderr.printf("Commandline file sharer\n");
             stderr.printf("\n");
             stderr.printf("commands:\n");
             stderr.printf("  -h, --help\t\tShow this help message and exit\n");
