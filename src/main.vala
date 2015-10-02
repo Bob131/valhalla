@@ -189,6 +189,41 @@ class valhalla : Application {
         var args = command_line.get_arguments();
         args = args[1:args.length];
 
+        if (settings.get_string("serve-url") == "") {
+            stderr.printf("Invalid config detected!\n");
+            if (utils.ui.confirm("Download previously sync'd config?", true)) {
+                var url = utils.ui.prompt("URL of service: ");
+
+                if (!/^https?:/i.match(url)) {
+                    url = "http://" + url;
+                }
+                if (!/_valhalla.conf$/.match(url)) {
+                    if (url[url.length] != '/') {
+                        url += "/";
+                    }
+                    url += "_valhalla.conf";
+                }
+
+                stderr.printf("Fetching config...\r");
+                var ss = new Soup.Session();
+                var msg = new Soup.Message("GET", url);
+                ss.send_message(msg);
+                if (msg.status_code != 200) {
+                    stderr.printf("\n");
+                    stderr.printf(@"$(msg.reason_phrase) ($(msg.status_code))\n");
+                    return 1;
+                }
+
+                var f = File.new_for_path(utils.config.path("valhalla.conf"));
+                f.create_readwrite(FileCreateFlags.REPLACE_DESTINATION).output_stream.write(msg.response_body.flatten().data);
+                settings = new GLib.Settings.with_backend(
+                        _id, utils.config.settings_backend_new(_path, settings_section));
+            } else {
+                stderr.printf("Please configure valhalla before invoking\n");
+                return 1;
+            }
+        }
+
         // TODO: Actually implement proper argument parsing
         if (args[0] == "--screenshot" || args[0] == "-s") {
             unowned string[]? _ = null;
@@ -254,11 +289,20 @@ class valhalla : Application {
             foreach (var entry in database->exec("SELECT * FROM Files")) {
                 stdout.printf(@"$(entry.get("remote_filename"))\n");
             }
+        } else if (args[0] == "--sync") {
+            mount = new utils.Mount();
+            stderr.printf("Synchronising configuration file... ");
+            var file = File.new_for_path(utils.config.path("valhalla.conf"));
+            file.copy(GLib.File.new_for_path(GLib.Path.build_filename(mount->location, "_valhalla.conf")),
+                GLib.FileCopyFlags.OVERWRITE|GLib.FileCopyFlags.NOFOLLOW_SYMLINKS);
+            stderr.printf("DONE!\n");
+            return 0;
         } else if (args[0] == "--help" || args[0] == "-h") {
             stderr.printf("usage: valhalla [FILES]\n");
             stderr.printf("       valhalla [-f | -d] [FILE or HASH]...\n");
             stderr.printf("       valhalla -s\n");
             stderr.printf("       valhalla -l\n");
+            stderr.printf("       valhalla --sync\n");
             stderr.printf("\n");
             stderr.printf("Commandline file sharer\n");
             stderr.printf("\n");
@@ -268,6 +312,7 @@ class valhalla : Application {
             stderr.printf("  -f, --find\t\tFind files by hash\n");
             stderr.printf("  -d, --delete\t\tDelete files by hash\n");
             stderr.printf("  -l  --list\t\tList all indexed remote filenames\n");
+            stderr.printf("      --sync\t\tUpload config file for later setups\n");
             stderr.printf("\n");
             stderr.printf("options:\n");
             stderr.printf("  -c  --config\t\tSelect configuration profile\n");

@@ -10,8 +10,8 @@ License:	GPLv3
 URL:		https://github.com/Bob131/valhalla
 Source0:	%{url}/archive/%{commit}.zip
 
-BuildRequires:	vala vala-tools readline-devel gtk3-devel sqlite-devel file-devel
-Requires:       readline gtk3 sqlite file-libs
+BuildRequires:	vala vala-tools readline-devel gtk3-devel sqlite-devel file-devel libsoup-devel
+Requires:       readline gtk3 sqlite file-libs libsoup
 
 %description
 Command line utility for sharing files

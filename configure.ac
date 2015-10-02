@@ -26,6 +26,7 @@ PKG_CHECK_MODULES(valhalla_U, [
   gtk+-3.0
   sqlite3
   zlib
+  libsoup-2.4
 ])
 
 AC_SUBST([GLIB_REQUIRED])

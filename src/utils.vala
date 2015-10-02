@@ -66,7 +66,7 @@ namespace utils {
         construct {
             this.location = GLib.Path.build_filename(Environment.get_tmp_dir(), "valhalla_temp_mount");
 
-            utils.ui.put_text("Mounting remote filesystem...");
+            utils.ui.put_text("Mounting remote filesystem");
 
             bool waiting_on_cmd;
             Thread<void*> t;
@@ -92,7 +92,7 @@ namespace utils {
                 t.join();
             }
 
-            utils.ui.put_text("Updating local file index... ");
+            utils.ui.put_text("Updating local file index ");
             var dir = GLib.Dir.open(location);
             string? name;
             string[] names = {};
@@ -118,7 +118,7 @@ namespace utils {
                         cs = utils.files.get_checksum(GLib.File.new_for_path(full_path));
                     }
                     database->exec("INSERT INTO Files (checksum, remote_filename) VALUES ($cs, $rf)", {cs, name});
-                    utils.ui.put_text(@"Updating local file index... ($(i)/$(names.length))");
+                    utils.ui.put_text(@"Updating local file index ($(i)/$(names.length))");
                 }
             }
             foreach (var record in database->exec("SELECT * FROM Files")) {
@@ -126,6 +126,7 @@ namespace utils {
                     database->exec("DELETE FROM Files WHERE remote_filename = $FN", {record.get("remote_filename")});
                 }
             }
+
             // clear line
             stderr.printf("%c[2K\r", 27);
         }

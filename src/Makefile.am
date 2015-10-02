@@ -24,6 +24,7 @@ valhalla_VALAFLAGS = \
 	--pkg gdk-3.0 \
 	--pkg gtk+-3.0 \
 	--pkg gmodule-2.0 \
+	--pkg libsoup-2.4 \
 	--thread \
 	--target-glib $(GLIB_REQUIRED) \
 	--gresources $(top_srcdir)/data/so.bob131.valhalla.gresources.xml
