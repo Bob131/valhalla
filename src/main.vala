@@ -1,27 +1,173 @@
 const string _id = "so.bob131.valhalla";
+const string _path = "/so/bob131/valhalla/";
 Settings settings;
+string settings_section;
 utils.Database* database;
 utils.Mount* mount;
 bool _mount_instantiated = false;
 
 
-class valhalla : Application {
-    private void _init_settings() {
-        var _be = utils.config.settings_backend_new("/%s/".printf(_id).replace(".", "/"));
-        settings = new GLib.Settings.with_backend(_id, _be);
-        database = new utils.Database();
+void init_stuff() {
+    if (settings_section == null) {
+        settings_section = "default";
+    }
+    settings = new GLib.Settings.with_backend(
+        _id, utils.config.settings_backend_new(_path, settings_section));
+    database = new utils.Database();
+}
+
+void deinit_stuff() {
+    delete database;
+    if (_mount_instantiated) {
+        delete mount;
+    }
+}
+
+
+
+[GtkTemplate (ui = "/so/bob131/valhalla/ui/main.ui")]
+class MainWindow : Gtk.ApplicationWindow {
+    [GtkChild]
+    private Gtk.Notebook notebook;
+    [GtkChild]
+    private Gtk.Image preview;
+    [GtkChild]
+    private Gtk.HeaderBar headerbar;
+    [GtkChild]
+    private Gtk.Button continue_button;
+    [GtkChild]
+    private Gtk.ProgressBar progress;
+    [GtkChild]
+    private Gtk.Revealer cancel_reveal;
+    [GtkChild]
+    private Gtk.LinkButton link;
+    [GtkChild]
+    private Gtk.Revealer save_reveal;
+
+    public Gdk.Pixbuf screenshot {get; construct;}
+
+    [GtkCallback]
+    private void cancel(Gtk.Button _) {
+        this.close();
     }
 
-    private valhalla() {
-        Object(flags: ApplicationFlags.HANDLES_OPEN|ApplicationFlags.HANDLES_COMMAND_LINE|ApplicationFlags.NON_UNIQUE);
-        _init_settings();
+    [GtkCallback]
+    private void @continue(Gtk.Button _) {
+        if (notebook.page == (notebook.get_n_pages()-1)) {
+            this.close();
+        }
+        notebook.next_page();
+    }
+
+    [GtkCallback]
+    private void save_and_quit(Gtk.Button _) {
+        var dialog = new Gtk.FileChooserDialog("Save as", this, Gtk.FileChooserAction.SAVE,
+            "_Cancel", Gtk.ResponseType.CANCEL,
+            "_Save", Gtk.ResponseType.ACCEPT);
+
+        var now = Time.local(time_t());
+        dialog.set_current_name(now.format(settings.get_string("temp-names") + ".png"));
+
+        var filter = new Gtk.FileFilter();
+        filter.add_mime_type("image/png");
+        dialog.set_filter(filter);
+
+        if (dialog.run() == Gtk.ResponseType.ACCEPT) {
+            screenshot.save(dialog.get_file().get_path(), "png");
+            this.close();
+        }
+
+        dialog.close();
+    }
+
+    public MainWindow(Gdk.Pixbuf buf) {
+        Object(screenshot: buf);
+    }
+
+    construct {
+        Gdk.Rectangle screen_size;
+        var screen = this.get_screen();
+        screen.get_monitor_geometry(screen.get_monitor_at_window(screen.get_active_window()), out screen_size);
+
+        var x = screenshot.width;
+        var y = screenshot.height;
+        for (var i=0;i<2;i++) {
+            if (x/(float) screen_size.width > 0.75 || y/(float) screen_size.height > 0.75) {
+                x = (int) Math.floor(x*0.75);
+                y = (int) Math.floor(y*0.75);
+            }
+        }
+        if (x != screen_size.width || y != screen_size.height) {
+            preview.set_from_pixbuf(screenshot.scale_simple(x, y, Gdk.InterpType.BILINEAR));
+        } else {
+            preview.set_from_pixbuf(screenshot);
+        }
+        preview.visible = true;
+        this.show_all();
+
+        notebook.switch_page.connect((page, num) => {
+            var name = page.get_name();
+            if (name == "transfer") {
+                headerbar.subtitle = "Uploading file";
+                continue_button.sensitive = false;
+                save_reveal.set_reveal_child(false);
+                progress.show_text = true;
+                progress.pulse();
+                var file = utils.files.make_temp("png");
+                screenshot.save(file.get_path(), "png");
+                utils.upload_file_async.begin(file,
+                    (obj, res) => {
+                        link.uri = utils.upload_file_async.end(res);
+                        link.label = link.uri;
+                        continue_button.sensitive = true;
+                        cancel_reveal.set_reveal_child(false);
+                        headerbar.subtitle = "";
+                    });
+            } else if (name == "link") {
+                continue_button.label = "Done";
+            }
+        });
+    }
+}
+
+
+
+class gvalhalla : Gtk.Application {
+    private MainWindow window;
+
+    public gvalhalla() {
+        Object(application_id: _id,
+            flags: ApplicationFlags.NON_UNIQUE);
+        init_stuff();
+    }
+
+    ~gvalhalla() {
+        deinit_stuff();
+    }
+
+    protected override void activate() {
+        unowned string[]? _ = null;
+        Gtk.init(ref _);
+        var pixbuf = utils.screenshot.take_interactive();
+        if (pixbuf != null) {
+            window = new MainWindow(pixbuf);
+            this.add_window(window);
+        }
+    }
+}
+
+
+
+class valhalla : Application {
+    public valhalla() {
+        Object(flags: ApplicationFlags.HANDLES_OPEN
+                      |ApplicationFlags.HANDLES_COMMAND_LINE
+                      |ApplicationFlags.NON_UNIQUE);
+        init_stuff();
     }
 
     ~valhalla() {
-        delete database;
-        if (_mount_instantiated) {
-            delete mount;
-        }
+        deinit_stuff();
     }
 
 
@@ -74,7 +220,7 @@ class valhalla : Application {
                     stderr.printf(@"No files matching checksum 0x$(arg)\n");
                     continue;
                 }
-                utils.cli.overwrite_prompt(@"Match for 0x$(arg)!", r);
+                utils.ui.overwrite_prompt(@"Match for 0x$(arg)!", r);
             }
         } else if (args[0] == "--delete" || args[0] == "-d") {
             args = args[1:args.length]; // remove the switch
@@ -109,10 +255,12 @@ class valhalla : Application {
                 stdout.printf(@"$(entry.get("remote_filename"))\n");
             }
         } else if (args[0] == "--help" || args[0] == "-h") {
-            stderr.printf("usage: valhalla [-f] [FILES]\n");
+            stderr.printf("usage: valhalla [FILES]\n");
+            stderr.printf("       valhalla [-f | -d] [FILE or HASH]...\n");
             stderr.printf("       valhalla -s\n");
+            stderr.printf("       valhalla -l\n");
             stderr.printf("\n");
-            stderr.printf("Commandline Empyrean client\n");
+            stderr.printf("Commandline file sharer\n");
             stderr.printf("\n");
             stderr.printf("commands:\n");
             stderr.printf("  -h, --help\t\tShow this help message and exit\n");
@@ -121,11 +269,14 @@ class valhalla : Application {
             stderr.printf("  -d, --delete\t\tDelete files by hash\n");
             stderr.printf("  -l  --list\t\tList all indexed remote filenames\n");
             stderr.printf("\n");
+            stderr.printf("options:\n");
+            stderr.printf("  -c  --config\t\tSelect configuration profile\n");
+            stderr.printf("\n");
             stderr.printf("FILES may be - for stdin (launches EDITOR if no input) or a list of space-\n");
             stderr.printf("separated files\n");
         } else { // no known switches given; assume we've been given a list of files
             if (args[0] == "-" || args.length == 0) {
-                if (utils.cli.isatty()) {
+                if (utils.ui.isatty()) {
                     var file = utils.files.make_temp("txt");
                     var editor = Environment.get_variable("EDITOR");
                     if (editor == null) {
@@ -176,20 +327,36 @@ class valhalla : Application {
 
         return 0;
     }
+}
 
 
-    public override void startup() {
-        base.startup();
+
+int main(string[] args) {
+    var exec_path = args[0].split("/");
+    var exec_name = exec_path[exec_path.length-1];
+
+    if (exec_name == "gvalhalla") {
+        var app = new gvalhalla();
+        return app.run(args);
     }
+    else {
+        var mutable_args = new Array<string?>();
+        mutable_args.data = args;
 
-
-    public override void activate() {
-        base.activate();
-    }
-
-
-    public static int main(string[] args) {
-        valhalla app = new valhalla();
+        for (var i=0;i<args.length;i++) {
+            if (args[i] == "-c" || args[i] == "--config") {
+                if (i != args.length-1) {
+                    settings_section = args[i+1];
+                    mutable_args.remove_range(i, 2);
+                    args = mutable_args.data;
+                    break;
+                } else {
+                    stderr.printf("Argument required for --config\n");
+                    return 1;
+                }
+            }
+        }
+        var app = new valhalla();
         return app.run(args);
     }
 }

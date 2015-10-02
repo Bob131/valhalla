@@ -1,18 +1,14 @@
 bin_PROGRAMS = valhalla gvalhalla
 
-base_sources = \
-	base.vala \
+
+valhalla_SOURCES = \
 	utils.vala \
 	utils-config.vala \
 	utils-c.c \
 	utils-files.vala \
 	utils-screenshot.vala \
-	utils-ui.vala
-
-
-valhalla_SOURCES = \
-	$(base_sources) \
-	valhalla.vala
+	utils-ui.vala \
+	main.vala
 
 valhalla_CFLAGS = \
 	$(valhalla_U_CFLAGS)
@@ -39,9 +35,8 @@ valhalla_LDADD = \
 
 
 gvalhalla_SOURCES = \
-	$(base_sources) \
-	$(top_srcdir)/data/so.bob131.valhalla.gresources.c \
-	gvalhalla.vala
+	$(valhalla_SOURCES) \
+	$(top_srcdir)/data/so.bob131.valhalla.gresources.c
 
 gvalhalla_CFLAGS = \
 	$(valhalla_U_CFLAGS)
