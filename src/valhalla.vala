@@ -1,6 +1,8 @@
 class valhalla : Application {
-    private valhalla() {
-        Object(flags: ApplicationFlags.HANDLES_OPEN|ApplicationFlags.HANDLES_COMMAND_LINE|ApplicationFlags.NON_UNIQUE);
+    private valhalla(string? c = null) {
+        Object(flags: ApplicationFlags.HANDLES_OPEN
+                      |ApplicationFlags.HANDLES_COMMAND_LINE
+                      |ApplicationFlags.NON_UNIQUE);
         init_stuff();
     }
 
@@ -105,6 +107,9 @@ class valhalla : Application {
             stderr.printf("  -d, --delete\t\tDelete files by hash\n");
             stderr.printf("  -l  --list\t\tList all indexed remote filenames\n");
             stderr.printf("\n");
+            stderr.printf("options:\n");
+            stderr.printf("  -c  --config\t\tSelect configuration profile\n");
+            stderr.printf("\n");
             stderr.printf("FILES may be - for stdin (launches EDITOR if no input) or a list of space-\n");
             stderr.printf("separated files\n");
         } else { // no known switches given; assume we've been given a list of files
@@ -162,18 +167,25 @@ class valhalla : Application {
     }
 
 
-    public override void startup() {
-        base.startup();
-    }
-
-
-    public override void activate() {
-        base.activate();
-    }
-
-
     public static int main(string[] args) {
-        valhalla app = new valhalla();
+        var mutable_args = new Array<string?>();
+        mutable_args.data = args;
+
+        for (var i=0;i<args.length;i++) {
+            if (args[i] == "-c" || args[i] == "--config") {
+                if (i != args.length-1) {
+                    settings_section = args[i+1];
+                    mutable_args.remove_range(i, 2);
+                    args = mutable_args.data;
+                    break;
+                } else {
+                    stderr.printf("Argument required for --config\n");
+                    return 1;
+                }
+            }
+        }
+
+        var app = new valhalla();
         return app.run(args);
     }
 }

@@ -9,7 +9,12 @@ namespace utils {
         private Sqlite.Statement* stmt;
 
         construct {
-            Sqlite.Database.open_v2(utils.config.path("files.db"), out db);
+            var db_name = "files";
+            if (settings_section != "default")
+                db_name += "_" + settings_section;
+            db_name += ".db";
+
+            Sqlite.Database.open_v2(utils.config.path(db_name), out db);
             db.exec("""CREATE TABLE IF NOT EXISTS Files (
                         date STRING DEFAULT CURRENT_TIMESTAMP,
                         checksum STRING,
@@ -17,7 +22,7 @@ namespace utils {
                         remote_filename STRING UNIQUE NOT NULL ON CONFLICT FAIL);""");
         }
 
-        public GLib.HashTable<string, string>[]? exec(string query, string[] args = {}) 
+        public GLib.HashTable<string, string>[]? exec(string query, string[] args = {})
             requires (db.prepare_v2(query, query.length, out stmt) == Sqlite.OK)
         {
             for (var i=0;i<args.length;i++) {

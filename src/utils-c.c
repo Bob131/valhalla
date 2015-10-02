@@ -17,8 +17,10 @@ int utils_ui_progress_get_width() {
 
 gchar* utils_config_path(const gchar *file);
 
-GSettingsBackend* utils_config_settings_backend_new(const gchar *schema_id) {
+GSettingsBackend* utils_config_settings_backend_new(const gchar *schema_id,
+                                                    const gchar *section) {
     g_return_val_if_fail(schema_id != NULL, NULL);
+    g_return_val_if_fail(section != NULL, NULL);
     return g_keyfile_settings_backend_new(
-            utils_config_path("valhalla.conf"), schema_id, "main");
+            utils_config_path("valhalla.conf"), schema_id, section);
 }

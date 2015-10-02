@@ -1,5 +1,5 @@
 namespace utils.config {
-    extern GLib.SettingsBackend settings_backend_new(string schema_id);
+    extern GLib.SettingsBackend settings_backend_new(string schema_id, string section);
 
     public string _config_path() {
         var path = GLib.Path.build_filename(GLib.Environment.get_user_config_dir(), "valhalla");
