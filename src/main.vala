@@ -91,11 +91,17 @@ class MainWindow : Gtk.ApplicationWindow {
 
         var x = screenshot.width;
         var y = screenshot.height;
-        for (var i=0;i<2;i++) {
-            if (x/(float) screen_size.width > 0.75 || y/(float) screen_size.height > 0.75) {
-                x = (int) Math.floor(x*0.75);
-                y = (int) Math.floor(y*0.75);
+        while (true) {
+            var keep_going = true;
+            for (var i=0;i<2;i++) {
+                if (x/(float) screen_size.width > 0.75 || y/(float) screen_size.height > 0.75) {
+                    x = (int) Math.floor(x*0.75);
+                    y = (int) Math.floor(y*0.75);
+                } else 
+                    keep_going = false;
             }
+            if (!keep_going)
+                break;
         }
         if (x != screen_size.width || y != screen_size.height) {
             preview.set_from_pixbuf(screenshot.scale_simple(x, y, Gdk.InterpType.BILINEAR));
@@ -134,10 +140,11 @@ class MainWindow : Gtk.ApplicationWindow {
 
 class gvalhalla : Gtk.Application {
     private MainWindow window;
+    public bool interactive {get; construct;}
 
-    public gvalhalla() {
+    public gvalhalla(bool @int = true) {
         Object(application_id: _id,
-            flags: ApplicationFlags.NON_UNIQUE);
+            flags: ApplicationFlags.NON_UNIQUE, interactive: @int);
         init_stuff();
     }
 
@@ -148,7 +155,11 @@ class gvalhalla : Gtk.Application {
     protected override void activate() {
         unowned string[]? _ = null;
         Gtk.init(ref _);
-        var pixbuf = utils.screenshot.take_interactive();
+        Gdk.Pixbuf pixbuf;
+        if (interactive)
+            pixbuf = utils.screenshot.take_interactive();
+        else
+            pixbuf = utils.screenshot.take();
         if (pixbuf != null) {
             window = new MainWindow(pixbuf);
             this.add_window(window);
@@ -381,7 +392,7 @@ int main(string[] args) {
     var exec_name = exec_path[exec_path.length-1];
 
     if (exec_name == "gvalhalla") {
-        var app = new gvalhalla();
+        var app = new gvalhalla(!("--" in args));
         return app.run(args);
     }
     else {
