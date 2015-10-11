@@ -11,7 +11,7 @@ namespace utils {
         construct {
             var db_name = "files";
             if (settings_section != "default")
-                db_name += "_" + settings_section;
+                db_name += "_" + (!) settings_section;
             db_name += ".db";
 
             Sqlite.Database.open_v2(utils.config.path(db_name), out db);
@@ -22,7 +22,7 @@ namespace utils {
                         remote_filename STRING UNIQUE NOT NULL ON CONFLICT FAIL);""");
         }
 
-        public GLib.HashTable<string, string>[]? exec(string query, string[] args = {})
+        public GLib.HashTable<string, string>[]? exec(string query, string?[] args = {})
             requires (db.prepare_v2(query, query.length, out stmt) == Sqlite.OK)
         {
             for (var i=0;i<args.length;i++) {
@@ -35,7 +35,7 @@ namespace utils {
                 var hs = new GLib.HashTable<string, string>(str_hash, str_equal);
                 for (var i=0;i<columns;i++) {
                     if (stmt->column_text(i) != null && stmt->column_text(i) != "") {
-                        hs.insert(stmt->column_name(i), stmt->column_text(i));
+                        hs.insert(stmt->column_name(i), (!) stmt->column_text(i));
                     }
                 }
                 r += hs;
@@ -94,20 +94,20 @@ namespace utils {
 
             utils.ui.put_text("Updating local file index ");
             var dir = GLib.Dir.open(location);
-            string? name;
+            string? _name;
             string[] names = {};
-            while ((name = dir.read_name()) != null) {
-                var full_path = GLib.Path.build_filename(location, name);
+            while ((_name = dir.read_name()) != null) {
+                var full_path = GLib.Path.build_filename(location, _name);
                 if (GLib.FileUtils.test(full_path, GLib.FileTest.IS_DIR|GLib.FileTest.IS_SYMLINK)) {
                     continue;
                 }
-                names += name;
+                names += (!) _name;
             }
             for (var i=0;i<names.length;i++) {
-                name = names[i];
+                var name = names[i];
                 if (!(database->contains(name))) {
-                    string? cs = null;
-                    if (/[0-9a-f]{8}/.match((cs = name.split(".")[0]))) {
+                    string? cs = name.split(".")[0];
+                    if (/[0-9a-f]{8}/.match((!) cs)) {
                         // assume it's one of our files and we know its checksum
                     } else {
                         // otherwise reset
@@ -166,10 +166,12 @@ namespace utils {
     }
 
 
-    public string? upload_file(GLib.File file) throws WriteError {
+    public string? upload_file(GLib.File file) throws WriteError
+        requires(file.get_basename() != null)
+    {
         var cs = utils.files.get_checksum(file);
         var dest_filename = settings.get_string("naming-scheme").replace("$c", cs);
-        dest_filename = dest_filename.replace("$f", file.get_basename());
+        dest_filename = dest_filename.replace("$f", (!) file.get_basename());
         dest_filename = dest_filename.replace("$e", utils.files.get_extension(file));
         dest_filename = GLib.Time.gm(time_t()).format(dest_filename);
 
@@ -196,7 +198,7 @@ namespace utils {
         if (utils.ui.is_gtk()) {
             meter = new utils.ui.gtk_progress();
         } else {
-            meter = new utils.ui.progress(file.get_basename());
+            meter = new utils.ui.progress((!) file.get_basename());
         }
         meter.update();
         file.copy(GLib.File.new_for_path(GLib.Path.build_filename(mount->location, dest_filename)),

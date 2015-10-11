@@ -1,20 +1,17 @@
 namespace utils.files {
-    public string? get_checksum(GLib.File file) {
-        if (file.query_exists()) {
-            var stream = file.read();
-            ulong adler = 1;
-            int done;
-            while (true) {
-                uint8 buffer[1024];
-                done = (int)stream.read(buffer);
-                if (done == 0) {
-                    break;
-                }
-                adler = ZLib.Utility.adler32(adler, buffer[0:done]);
+    public string get_checksum(GLib.File file) throws Error {
+        var stream = file.read();
+        ulong adler = 1;
+        int done;
+        while (true) {
+            uint8 buffer[1024];
+            done = (int)stream.read(buffer);
+            if (done == 0) {
+                break;
             }
-            return "%08x".printf((uint) adler);
+            adler = ZLib.Utility.adler32(adler, buffer[0:done]);
         }
-        return null;
+        return "%08x".printf((uint) adler);
     }
 
 
@@ -29,10 +26,12 @@ namespace utils.files {
     }
 
 
-    private GLib.HashTable<string, string>? _mimetypes = null;
-    public string? get_extension(GLib.File input) {
+    private HashTable<string, string>? _mimetypes;
+    public string get_extension(GLib.File input) throws Error
+        requires(input.get_path() != null)
+    {
         if (_mimetypes == null) {
-            _mimetypes = new GLib.HashTable<string, string>(GLib.str_hash, GLib.str_equal);
+            _mimetypes = new HashTable<string, string>(GLib.str_hash, GLib.str_equal);
             string[] files = {"/etc/mime.types",
                                 "/etc/httpd/mime.types"};
             foreach (var file in files) {
@@ -53,34 +52,28 @@ namespace utils.files {
                     var d = line.split("\t");
                     mime = d[0];
                     ext = d[d.length-1].strip().split(" ")[0];
-                    _mimetypes.insert(mime, @".$(ext)");
+                    ((!) _mimetypes).insert(mime, @".$(ext)");
                 }
             }
         }
 
-        if (input.query_exists()) {
-            Regex[] txt_synonyms = {
-                /^text\//,
-                /[\/\+]xml/,
-                /[\/\+]json/,
-                /application\/javascript/,
-                /message\/rfc822/
-            };
-            var magic = new LibMagic.Magic(
-                LibMagic.Flags.SYMLINK|LibMagic.Flags.MIME_TYPE|LibMagic.Flags.ERROR);
-            magic.load();
-            var mime = magic.file(input.get_path());
-            foreach (var regex in txt_synonyms) {
-                if (regex.match(mime)) {
-                    return ".txt";
-                }
+        Regex[] txt_synonyms = {
+            /^text\//,
+            /[\/\+]xml/,
+            /[\/\+]json/,
+            /application\/javascript/,
+            /message\/rfc822/
+        };
+        var magic = new LibMagic.Magic(
+            LibMagic.Flags.SYMLINK|LibMagic.Flags.MIME_TYPE|LibMagic.Flags.ERROR);
+        magic.load();
+        var mime = (!) magic.file((!) input.get_path());
+        foreach (var regex in txt_synonyms) {
+            if (regex.match(mime)) {
+                return ".txt";
             }
-            var r = _mimetypes.get(mime);
-            if (r == null) {
-                return "";
-            }
-            return r;
         }
-        return null;
+        var r = ((!) _mimetypes).get(mime);
+        return r;
     }
 }

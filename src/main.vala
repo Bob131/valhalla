@@ -1,18 +1,17 @@
 const string _id = "so.bob131.valhalla";
 const string _path = "/so/bob131/valhalla/";
 Settings settings;
-string settings_section;
+string? settings_section;
 utils.Database* database;
 utils.Mount* mount;
 bool _mount_instantiated = false;
 
 
 void init_stuff() {
-    if (settings_section == null) {
+    if (settings_section == null)
         settings_section = "default";
-    }
     settings = new GLib.Settings.with_backend(
-        _id, utils.config.settings_backend_new(_path, settings_section));
+        _id, utils.config.settings_backend_new(_path, (!) settings_section));
     database = new utils.Database();
 }
 
@@ -73,7 +72,7 @@ class MainWindow : Gtk.ApplicationWindow {
         dialog.set_filter(filter);
 
         if (dialog.run() == Gtk.ResponseType.ACCEPT) {
-            screenshot.save(dialog.get_file().get_path(), "png");
+            screenshot.save((!) dialog.get_file().get_path(), "png");
             this.close();
         }
 
@@ -87,7 +86,7 @@ class MainWindow : Gtk.ApplicationWindow {
     construct {
         Gdk.Rectangle screen_size;
         var screen = this.get_screen();
-        screen.get_monitor_geometry(screen.get_monitor_at_window(screen.get_active_window()), out screen_size);
+        screen.get_monitor_geometry(screen.get_monitor_at_window((!)screen.get_active_window()), out screen_size);
 
         var x = screenshot.width;
         var y = screenshot.height;
@@ -97,7 +96,7 @@ class MainWindow : Gtk.ApplicationWindow {
                 if (x/(float) screen_size.width > 0.75 || y/(float) screen_size.height > 0.75) {
                     x = (int) Math.floor(x*0.75);
                     y = (int) Math.floor(y*0.75);
-                } else 
+                } else
                     keep_going = false;
             }
             if (!keep_going)
@@ -120,10 +119,10 @@ class MainWindow : Gtk.ApplicationWindow {
                 progress.show_text = true;
                 progress.pulse();
                 var file = utils.files.make_temp("png");
-                screenshot.save(file.get_path(), "png");
+                screenshot.save((!)file.get_path(), "png");
                 utils.upload_file_async.begin(file,
                     (obj, res) => {
-                        link.uri = utils.upload_file_async.end(res);
+                        link.uri = (!) utils.upload_file_async.end(res);
                         link.label = link.uri;
                         continue_button.sensitive = true;
                         cancel_reveal.set_reveal_child(false);
@@ -155,13 +154,13 @@ class gvalhalla : Gtk.Application {
     protected override void activate() {
         unowned string[]? _ = null;
         Gtk.init(ref _);
-        Gdk.Pixbuf pixbuf;
+        Gdk.Pixbuf? pixbuf;
         if (interactive)
             pixbuf = utils.screenshot.take_interactive();
         else
             pixbuf = utils.screenshot.take();
         if (pixbuf != null) {
-            window = new MainWindow(pixbuf);
+            window = new MainWindow((!) pixbuf);
             this.add_window(window);
         }
     }
@@ -187,10 +186,10 @@ class valhalla : Application {
             if (file.query_exists()) {
                 var url = utils.upload_file(file);
                 if (url != null) {
-                    stdout.printf("%s\n", url);
+                    stdout.printf("%s\n", (!) url);
                 }
             } else {
-                stderr.printf(@"File '$(file.get_basename())' not found\n");
+                stderr.printf(@"File '$((!)file.get_basename())' not found\n");
             }
         }
     }
@@ -228,7 +227,7 @@ class valhalla : Application {
                 var f = File.new_for_path(utils.config.path("valhalla.conf"));
                 f.create_readwrite(FileCreateFlags.REPLACE_DESTINATION).output_stream.write(msg.response_body.flatten().data);
                 settings = new GLib.Settings.with_backend(
-                        _id, utils.config.settings_backend_new(_path, settings_section));
+                        _id, utils.config.settings_backend_new(_path, (!) settings_section));
             } else {
                 stderr.printf("Please configure valhalla before invoking\n");
                 return 1;
@@ -243,7 +242,7 @@ class valhalla : Application {
             var pixbuf = utils.screenshot.take_interactive();
             if (pixbuf != null) {
                 try {
-                    pixbuf.save(file.get_path(), "png");
+                    ((!)pixbuf).save((!) file.get_path(), "png");
                 } catch (Error e) {
                     stderr.printf(@"Error capturing screenshot: $(e.message)\n");
                     return 1;
@@ -255,39 +254,38 @@ class valhalla : Application {
             }
         } else if (args[0] == "--find" || args[0] == "-f") {
             args = args[1:args.length]; // remove the switch
-            foreach (string? arg in args) {
-                arg = utils.checksum_from_arg(arg);
-                if (arg == null) {
+            foreach (var arg in args) {
+                var checksum = utils.checksum_from_arg(arg);
+                if (checksum == null) {
                     stderr.printf(@"File '$(arg)' not found\n");
                     return 1;
                 }
-                var r = database->exec("SELECT * FROM Files WHERE checksum = $CS", {arg});
+                var r = database->exec("SELECT * FROM Files WHERE checksum = $CS", {checksum});
                 if (r == null) {
-                    stderr.printf(@"No files matching checksum 0x$(arg)\n");
+                    stderr.printf(@"No files matching checksum 0x$((!) checksum)\n");
                     continue;
                 }
-                utils.ui.overwrite_prompt(@"Match for 0x$(arg)!", r);
+                utils.ui.overwrite_prompt(@"Match for 0x$((!) checksum)!", r);
             }
         } else if (args[0] == "--delete" || args[0] == "-d") {
             args = args[1:args.length]; // remove the switch
-            foreach (string? arg in args) {
-                var oarg = arg;
-                arg = utils.checksum_from_arg(arg);
-                if (arg == null) {
-                    if (database->contains(oarg)) {
-                        utils.delete_file(oarg);
-                        stdout.printf("Deleted: %s\n", oarg);
+            foreach (var arg in args) {
+                var checksum = utils.checksum_from_arg(arg);
+                if (checksum == null) {
+                    if (database->contains(arg)) {
+                        utils.delete_file(arg);
+                        stdout.printf("Deleted: %s\n", arg);
                         continue;
                     }
-                    stderr.printf(@"File '$(oarg)' not found\n");
+                    stderr.printf(@"File '$(arg)' not found\n");
                     return 1;
                 }
-                var r = database->exec("SELECT * FROM Files WHERE checksum = $CS", {arg});
+                var r = database->exec("SELECT * FROM Files WHERE checksum = $CS", {checksum});
                 if (r == null) {
-                    stderr.printf(@"No files matching checksum 0x$(arg)\n");
+                    stderr.printf(@"No files matching checksum 0x$((!)checksum)\n");
                     continue;
                 }
-                string[] rnames = {};
+                string?[] rnames = {};
                 foreach (var entry in r) {
                     var name = entry.get("remote_filename");
                     utils.delete_file(name);
@@ -340,7 +338,7 @@ class valhalla : Application {
                     }
                     Subprocess proc;
                     try {
-                        proc = new Subprocess.newv({editor, file.get_path()}, SubprocessFlags.STDIN_INHERIT);
+                        proc = new Subprocess.newv({(!) editor, (!) file.get_path()}, SubprocessFlags.STDIN_INHERIT);
                         proc.wait();
                     } catch (Error e) {
                         stderr.printf(@"Error starting editor: $(e.message)\n");
@@ -366,7 +364,6 @@ class valhalla : Application {
                         stderr.printf(@"Error: $(e.message)\n");
                         return 1;
                     }
-                    file = File.new_for_path(file.get_path());
                     open({file}, "");
                     try {
                         file.delete();
@@ -396,7 +393,7 @@ int main(string[] args) {
         return app.run(args);
     }
     else {
-        var mutable_args = new Array<string?>();
+        var mutable_args = new Array<string>();
         mutable_args.data = args;
 
         for (var i=0;i<args.length;i++) {

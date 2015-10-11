@@ -26,6 +26,8 @@ valhalla_VALAFLAGS = \
 	--pkg gmodule-2.0 \
 	--pkg libsoup-2.4 \
 	--thread \
+	--vapidir $(top_srcdir)/vapi \
+	--enable-experimental-non-null \
 	--target-glib $(GLIB_REQUIRED) \
 	--gresources $(top_srcdir)/data/so.bob131.valhalla.gresources.xml
 

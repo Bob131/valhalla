@@ -10,14 +10,14 @@ namespace utils.ui {
             if (default_value == null) {
                 return prompt(text);
             } else {
-                return default_value;
+                return (!) default_value;
             }
         }
-        return resp;
+        return (!) resp;
     }
 
 
-    public bool confirm(string? que = "Are you sure?", bool? default_answer = false) { // true for yes, false for no
+    public bool confirm(string que = "Are you sure?", bool default_answer = false) { // true for yes, false for no
         string def;
         string text;
         if (default_answer) {
@@ -36,10 +36,14 @@ namespace utils.ui {
     }
 
 
-    private Gtk.ProgressBar get_progressbar() {
-        var notebook = (Application.get_default() as Gtk.Application).active_window.get_child() as Gtk.Notebook;
-        var box = notebook.get_nth_page(1) as Gtk.Box;
-        return box.get_children().nth_data(0) as Gtk.ProgressBar;
+    // TODO: Remove potential null-dereference
+    private Gtk.ProgressBar get_progressbar()
+        requires (is_gtk())
+    {
+        var app = (!) (Application.get_default() as Gtk.Application);
+        var notebook = (!) (app.active_window.get_child() as Gtk.Notebook);
+        var box = (!) (notebook.get_nth_page(1) as Gtk.Box);
+        return (!) (box.get_children().nth_data(0) as Gtk.ProgressBar);
     }
 
 
@@ -47,12 +51,12 @@ namespace utils.ui {
         if (is_gtk()) {
             var pg = get_progressbar();
             if (text != null) {
-                pg.text = text;
+                pg.text = (!) text;
             }
             pg.pulse();
         } else {
             if (text != null) {
-                stderr.printf(@"$(text)\r");
+                stderr.printf(@"$((!) text)\r");
             }
         }
     }
@@ -238,7 +242,7 @@ namespace utils.ui {
         }
 
         if (prompt != null) {
-            return confirm(prompt);
+            return confirm((!) prompt);
         }
         return true; // the TRUE-ly superior choice c:
     }
