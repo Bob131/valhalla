@@ -62,7 +62,6 @@ namespace utils {
     class Mount : GLib.Object {
         public string location;
 
-
         construct {
             this.location = GLib.Path.build_filename(Environment.get_tmp_dir(), "valhalla_temp_mount");
 
@@ -93,7 +92,12 @@ namespace utils {
             }
 
             utils.ui.put_text("Updating local file index ");
-            var dir = GLib.Dir.open(location);
+            Dir dir;
+            try {
+                dir = GLib.Dir.open(location);
+            } catch (Error e) {
+                return;
+            }
             string? _name;
             string[] names = {};
             while ((_name = dir.read_name()) != null) {
@@ -115,7 +119,11 @@ namespace utils {
                     }
                     if (settings.get_boolean("track-remote")) {
                         var full_path = GLib.Path.build_filename(location, name);
-                        cs = utils.files.get_checksum(GLib.File.new_for_path(full_path));
+                        try {
+                            cs = utils.files.get_checksum(GLib.File.new_for_path(full_path));
+                        } catch (Error e) {
+                            continue;
+                        }
                     }
                     database->exec("INSERT INTO Files (checksum, remote_filename) VALUES ($cs, $rf)", {cs, name});
                     utils.ui.put_text(@"Updating local file index ($(i)/$(names.length))");
@@ -144,9 +152,9 @@ namespace utils {
 
     public string? checksum_from_arg(owned string arg) {
         var file = GLib.File.new_for_commandline_arg(arg);
-        if (file.query_exists()) {
+        try {
             arg = utils.files.get_checksum(file);
-        }
+        } catch (Error e) {}
         if (arg.length == 8 || (arg.length == 10 && arg[0:2] == "0x")) {
             if (arg.length == 10) {
                 arg = arg[2:arg.length];
@@ -169,7 +177,12 @@ namespace utils {
     public string? upload_file(GLib.File file) throws WriteError
         requires(file.get_basename() != null)
     {
-        var cs = utils.files.get_checksum(file);
+        string cs;
+        try {
+            cs = utils.files.get_checksum(file);
+        } catch (Error e) {
+            return null;
+        }
         var dest_filename = settings.get_string("naming-scheme").replace("$c", cs);
         dest_filename = dest_filename.replace("$f", (!) file.get_basename());
         dest_filename = dest_filename.replace("$e", utils.files.get_extension(file));
