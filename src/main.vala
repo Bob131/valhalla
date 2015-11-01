@@ -353,6 +353,7 @@ class valhalla : Application {
                         stderr.printf("File creation aborted\n");
                     }
                 } else {
+                    stdout.printf("Reading from stdin...");
                     var input = command_line.get_stdin();
                     var file = utils.files.make_temp();
                     FileOutputStream output;
