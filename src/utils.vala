@@ -1,9 +1,3 @@
-extern int flock(int fd, int operation);
-extern const int LOCK_SH;
-extern const int LOCK_EX;
-extern const int LOCK_UN;
-extern const int LOCK_NB;
-
 namespace utils {
     public errordomain WriteError {
         RESERVED_FILENAME
@@ -72,10 +66,15 @@ namespace utils {
         private int lock_fd;
 
         private void take_shared_flock() {
-            if (flock(lock_fd, LOCK_SH) == -1) {
+            if (Posix.flock(lock_fd, Posix.FlockType.SHARED) == -1) {
                 stderr.printf(@"Fatal error acquiring mount lock: $(strerror(errno))");
                 Posix.exit(1);
             }
+        }
+
+        private bool do_mount_ops() {
+            return Posix.flock(lock_fd, Posix.FlockType.EXCLUSIVE|Posix.FlockType.NONBLOCKING) == 0
+                && unmount_cmd != "";
         }
 
         construct {
@@ -89,7 +88,7 @@ namespace utils {
             this.lock_fd = Posix.open(lock_location, Posix.O_RDONLY|Posix.O_CREAT, 0600);
 
             // is the mount already set up?
-            if (flock(lock_fd, LOCK_EX|LOCK_NB) == -1 && unmount_cmd != "") {
+            if (!do_mount_ops()) {
                 // take lock anyway
                 take_shared_flock();
                 return;
@@ -173,18 +172,19 @@ namespace utils {
 
         ~Mount() {
             // attempt to acquire exclusive lock
-            if (flock(lock_fd, LOCK_EX|LOCK_NB) == 0 && unmount_cmd != "") {
+            if (do_mount_ops()) {
                 // unmount and clean up
                 new Subprocess.newv({"/bin/sh", "-c", unmount_cmd.replace("$f", location)},
                         SubprocessFlags.INHERIT_FDS).wait();
                 Posix.rmdir(location);
 
                 // release lock
-                flock(lock_fd, LOCK_UN);
+                Posix.flock(lock_fd, Posix.FlockType.UNLOCK);
                 Posix.close(lock_fd);
+                Posix.unlink(lock_location);
             } else {
                 // release lock without delete
-                flock(lock_fd, LOCK_UN);
+                Posix.flock(lock_fd, Posix.FlockType.UNLOCK);
             }
         }
     }

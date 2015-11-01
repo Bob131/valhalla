@@ -20,11 +20,12 @@ valhalla_VALAFLAGS = \
 	--pkg linux \
 	--pkg zlib \
 	--pkg libmagic \
-	--pkg sqlite3 \
 	--pkg gdk-3.0 \
 	--pkg gtk+-3.0 \
 	--pkg gmodule-2.0 \
 	--pkg libsoup-2.4 \
+	--pkg sqlite3 \
+	--pkg flock \
 	--thread \
 	--vapidir $(top_srcdir)/vapi \
 	--enable-experimental-non-null \
@@ -36,6 +37,8 @@ valhalla_LDADD = \
 	-lmagic \
 	$(valhalla_U_LIBS)
 
+
+.PHONY: gvalhalla
 
 gvalhalla$(EXEEXT):
 	cp valhalla gvalhalla
