@@ -4,7 +4,7 @@ namespace utils {
     }
 
 
-    class Database : GLib.Object {
+    class Database : Object {
         private Sqlite.Database db;
         private Sqlite.Statement* stmt;
 
@@ -20,19 +20,21 @@ namespace utils {
                         checksum STRING,
                         local_filename STRING,
                         remote_filename STRING UNIQUE NOT NULL ON CONFLICT FAIL);""");
+
+            //Posix.creat()
         }
 
-        public GLib.HashTable<string, string>[]? exec(string query, string?[] args = {})
+        public HashTable<string, string>[]? exec(string query, string?[] args = {})
             requires (db.prepare_v2(query, query.length, out stmt) == Sqlite.OK)
         {
             for (var i=0;i<args.length;i++) {
                 stmt->bind_text(i+1, args[i]);
             }
 
-            GLib.HashTable<string, string>[] r = {};
+            HashTable<string, string>[] r = {};
             var columns = stmt->column_count();
             while (stmt->step() == Sqlite.ROW) {
-                var hs = new GLib.HashTable<string, string>(str_hash, str_equal);
+                var hs = new HashTable<string, string>(str_hash, str_equal);
                 for (var i=0;i<columns;i++) {
                     if (stmt->column_text(i) != null && stmt->column_text(i) != "") {
                         hs.insert(stmt->column_name(i), (!) stmt->column_text(i));
@@ -59,11 +61,11 @@ namespace utils {
     }
 
 
-    class Mount : GLib.Object {
+    class Mount : Object {
         public string location;
 
         construct {
-            this.location = GLib.Path.build_filename(Environment.get_tmp_dir(), "valhalla_temp_mount");
+            this.location = Path.build_filename(Environment.get_tmp_dir(), "valhalla_temp_mount");
 
             utils.ui.put_text("Mounting remote filesystem");
 
@@ -83,7 +85,7 @@ namespace utils {
             _mount_instantiated = true;
             Posix.mkdir(location, 0700);
             var cmd = settings.get_string("mount-command").replace("$f", location);
-            var p = new GLib.Subprocess.newv({"/bin/sh", "-c", cmd}, GLib.SubprocessFlags.INHERIT_FDS);
+            var p = new Subprocess.newv({"/bin/sh", "-c", cmd}, SubprocessFlags.INHERIT_FDS);
             p.wait();
 
             if (utils.ui.is_gtk()) {
@@ -94,15 +96,15 @@ namespace utils {
             utils.ui.put_text("Updating local file index ");
             Dir dir;
             try {
-                dir = GLib.Dir.open(location);
+                dir = Dir.open(location);
             } catch (Error e) {
                 return;
             }
             string? _name;
             string[] names = {};
             while ((_name = dir.read_name()) != null) {
-                var full_path = GLib.Path.build_filename(location, _name);
-                if (GLib.FileUtils.test(full_path, GLib.FileTest.IS_DIR|GLib.FileTest.IS_SYMLINK)) {
+                var full_path = Path.build_filename(location, _name);
+                if (FileUtils.test(full_path, FileTest.IS_DIR|FileTest.IS_SYMLINK)) {
                     continue;
                 }
                 names += (!) _name;
@@ -118,9 +120,9 @@ namespace utils {
                         cs = null;
                     }
                     if (settings.get_boolean("track-remote")) {
-                        var full_path = GLib.Path.build_filename(location, name);
+                        var full_path = Path.build_filename(location, name);
                         try {
-                            cs = utils.files.get_checksum(GLib.File.new_for_path(full_path));
+                            cs = utils.files.get_checksum(File.new_for_path(full_path));
                         } catch (Error e) {
                             continue;
                         }
@@ -142,8 +144,8 @@ namespace utils {
         ~Mount() {
             string unmount = settings.get_string("unmount-command");
             if (unmount != "") {
-                new GLib.Subprocess.newv({"/bin/sh", "-c", unmount.replace("$f", location)},
-                        GLib.SubprocessFlags.INHERIT_FDS).wait();
+                new Subprocess.newv({"/bin/sh", "-c", unmount.replace("$f", location)},
+                        SubprocessFlags.INHERIT_FDS).wait();
                 Posix.rmdir(location);
             }
         }
@@ -151,7 +153,7 @@ namespace utils {
 
 
     public string? checksum_from_arg(owned string arg) {
-        var file = GLib.File.new_for_commandline_arg(arg);
+        var file = File.new_for_commandline_arg(arg);
         try {
             arg = utils.files.get_checksum(file);
         } catch (Error e) {}
@@ -170,11 +172,11 @@ namespace utils {
             mount = new Mount();
         }
         database->exec("DELETE FROM Files WHERE remote_filename = $FN", {filename});
-        GLib.File.new_for_path(GLib.Path.build_filename(mount->location, filename)).delete();
+        File.new_for_path(Path.build_filename(mount->location, filename)).delete();
     }
 
 
-    public string? upload_file(GLib.File file) throws WriteError
+    public string? upload_file(File file) throws WriteError
         requires(file.get_basename() != null)
     {
         string cs;
@@ -186,7 +188,7 @@ namespace utils {
         var dest_filename = settings.get_string("naming-scheme").replace("$c", cs);
         dest_filename = dest_filename.replace("$f", (!) file.get_basename());
         dest_filename = dest_filename.replace("$e", utils.files.get_extension(file));
-        dest_filename = GLib.Time.gm(time_t()).format(dest_filename);
+        dest_filename = Time.gm(time_t()).format(dest_filename);
 
         mount = new Mount();
 
@@ -214,11 +216,11 @@ namespace utils {
             meter = new utils.ui.progress((!) file.get_basename());
         }
         meter.update();
-        file.copy(GLib.File.new_for_path(GLib.Path.build_filename(mount->location, dest_filename)),
-                GLib.FileCopyFlags.OVERWRITE|GLib.FileCopyFlags.NOFOLLOW_SYMLINKS, null, (current, total) => {
+        file.copy(File.new_for_path(Path.build_filename(mount->location, dest_filename)),
+                FileCopyFlags.OVERWRITE|FileCopyFlags.NOFOLLOW_SYMLINKS, null, (current, total) => {
             meter.update(current, total);
         });
-        GLib.FileUtils.chmod(GLib.Path.build_filename(mount->location, dest_filename), 0644);
+        FileUtils.chmod(Path.build_filename(mount->location, dest_filename), 0644);
         meter.clear();
 
         database->exec("DELETE FROM Files WHERE remote_filename = $FN", {dest_filename});
@@ -233,7 +235,7 @@ namespace utils {
     }
 
 
-    public async string? upload_file_async(GLib.File file) {
+    public async string? upload_file_async(File file) {
         string? output = null;
         SourceFunc cb = upload_file_async.callback;
         ThreadFunc<void*> run = () => {

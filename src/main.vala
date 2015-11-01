@@ -10,7 +10,7 @@ bool _mount_instantiated = false;
 void init_stuff() {
     if (settings_section == null)
         settings_section = "default";
-    settings = new GLib.Settings.with_backend(
+    settings = new Settings.with_backend(
         _id, utils.config.settings_backend_new(_path, (!) settings_section));
     database = new utils.Database();
 }
@@ -226,7 +226,7 @@ class valhalla : Application {
 
                 var f = File.new_for_path(utils.config.path("valhalla.conf"));
                 f.create_readwrite(FileCreateFlags.REPLACE_DESTINATION).output_stream.write(msg.response_body.flatten().data);
-                settings = new GLib.Settings.with_backend(
+                settings = new Settings.with_backend(
                         _id, utils.config.settings_backend_new(_path, (!) settings_section));
             } else {
                 stderr.printf("Please configure valhalla before invoking\n");
@@ -302,8 +302,8 @@ class valhalla : Application {
             mount = new utils.Mount();
             stderr.printf("Synchronising configuration file... ");
             var file = File.new_for_path(utils.config.path("valhalla.conf"));
-            file.copy(GLib.File.new_for_path(GLib.Path.build_filename(mount->location, "_valhalla.conf")),
-                GLib.FileCopyFlags.OVERWRITE|GLib.FileCopyFlags.NOFOLLOW_SYMLINKS);
+            file.copy(File.new_for_path(Path.build_filename(mount->location, "_valhalla.conf")),
+                FileCopyFlags.OVERWRITE|FileCopyFlags.NOFOLLOW_SYMLINKS);
             stderr.printf("DONE!\n");
             return 0;
         } else if (args[0] == "--help" || args[0] == "-h") {
@@ -371,7 +371,7 @@ class valhalla : Application {
                     } catch (Error e) {}
                 }
             } else {
-                Array<GLib.File> files = new Array<GLib.File>();
+                Array<File> files = new Array<File>();
                 foreach (var str in args) {
                     files.append_val(command_line.create_file_for_arg(str));
                 }

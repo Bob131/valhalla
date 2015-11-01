@@ -1,5 +1,5 @@
 namespace utils.files {
-    public string get_checksum(GLib.File file) throws Error {
+    public string get_checksum(File file) throws Error {
         var stream = file.read();
         ulong adler = 1;
         int done;
@@ -15,27 +15,27 @@ namespace utils.files {
     }
 
 
-    public GLib.File make_temp(owned string extension = "") {
+    public File make_temp(owned string extension = "") {
         if (extension != "") {
             extension = "." + extension;
         }
         var now = Time.local(time_t());
         var filepath = now.format(settings.get_string("temp-names") + extension);
         filepath = @"$(Environment.get_tmp_dir())/$(filepath)";
-        return GLib.File.new_for_path(filepath);
+        return File.new_for_path(filepath);
     }
 
 
     private HashTable<string, string>? _mimetypes;
-    public string get_extension(GLib.File input) throws Error
+    public string get_extension(File input) throws Error
         requires(input.get_path() != null)
     {
         if (_mimetypes == null) {
-            _mimetypes = new HashTable<string, string>(GLib.str_hash, GLib.str_equal);
+            _mimetypes = new HashTable<string, string>(str_hash, str_equal);
             string[] files = {"/etc/mime.types",
                                 "/etc/httpd/mime.types"};
             foreach (var file in files) {
-                var f = GLib.File.new_for_path(file);
+                var f = File.new_for_path(file);
                 uint8[] data;
                 string etag;
                 try {

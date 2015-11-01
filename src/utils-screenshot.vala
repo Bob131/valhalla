@@ -157,7 +157,7 @@ namespace utils.screenshot {
 
             selection_window.destroy();
 
-            GLib.Timeout.add(200, () => {
+            Timeout.add(200, () => {
                 Gtk.main_quit();
 
                 if (!screenshot_taken) {
@@ -213,7 +213,7 @@ namespace utils.screenshot {
             return null;
         }
 
-        unowned GLib.List<weak Gdk.Window> _window_stack = (!)window_stack;
+        unowned List<weak Gdk.Window> _window_stack = (!)window_stack;
         _window_stack.reverse();
 
         foreach (var window in _window_stack) {
