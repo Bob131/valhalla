@@ -1,3 +1,9 @@
+extern int flock(int fd, int operation);
+extern const int LOCK_SH;
+extern const int LOCK_EX;
+extern const int LOCK_UN;
+extern const int LOCK_NB;
+
 namespace utils {
     public errordomain WriteError {
         RESERVED_FILENAME
@@ -20,8 +26,6 @@ namespace utils {
                         checksum STRING,
                         local_filename STRING,
                         remote_filename STRING UNIQUE NOT NULL ON CONFLICT FAIL);""");
-
-            //Posix.creat()
         }
 
         public HashTable<string, string>[]? exec(string query, string?[] args = {})
@@ -63,9 +67,36 @@ namespace utils {
 
     class Mount : Object {
         public string location;
+        private string unmount_cmd;
+        private string lock_location;
+        private int lock_fd;
+
+        private void take_shared_flock() {
+            if (flock(lock_fd, LOCK_SH) == -1) {
+                stderr.printf(@"Fatal error acquiring mount lock: $(strerror(errno))");
+                Posix.exit(1);
+            }
+        }
 
         construct {
+            _mount_instantiated = true;
+
+            this.unmount_cmd = settings.get_string("unmount-command");
             this.location = Path.build_filename(Environment.get_tmp_dir(), "valhalla_temp_mount");
+
+            // set up mount lock
+            this.lock_location = Path.build_filename(Environment.get_tmp_dir(), "valhalla_lock");
+            this.lock_fd = Posix.open(lock_location, Posix.O_RDONLY|Posix.O_CREAT, 0600);
+
+            // is the mount already set up?
+            if (flock(lock_fd, LOCK_EX|LOCK_NB) == -1 && unmount_cmd != "") {
+                // take lock anyway
+                take_shared_flock();
+                return;
+            }
+
+            // reset lock
+            take_shared_flock();
 
             utils.ui.put_text("Mounting remote filesystem");
 
@@ -82,7 +113,6 @@ namespace utils {
                 t = new Thread<void*>(null, pulse);
             }
 
-            _mount_instantiated = true;
             Posix.mkdir(location, 0700);
             var cmd = settings.get_string("mount-command").replace("$f", location);
             var p = new Subprocess.newv({"/bin/sh", "-c", cmd}, SubprocessFlags.INHERIT_FDS);
@@ -142,11 +172,19 @@ namespace utils {
         }
 
         ~Mount() {
-            string unmount = settings.get_string("unmount-command");
-            if (unmount != "") {
-                new Subprocess.newv({"/bin/sh", "-c", unmount.replace("$f", location)},
+            // attempt to acquire exclusive lock
+            if (flock(lock_fd, LOCK_EX|LOCK_NB) == 0 && unmount_cmd != "") {
+                // unmount and clean up
+                new Subprocess.newv({"/bin/sh", "-c", unmount_cmd.replace("$f", location)},
                         SubprocessFlags.INHERIT_FDS).wait();
                 Posix.rmdir(location);
+
+                // release lock
+                flock(lock_fd, LOCK_UN);
+                Posix.close(lock_fd);
+            } else {
+                // release lock without delete
+                flock(lock_fd, LOCK_UN);
             }
         }
     }
