@@ -37,15 +37,5 @@ valhalla_LDADD = \
 	$(valhalla_U_LIBS)
 
 
-gvalhalla_SOURCES = \
-	$(valhalla_SOURCES) \
-	$(top_srcdir)/data/so.bob131.valhalla.gresources.c
-
-gvalhalla_CFLAGS = \
-	$(valhalla_U_CFLAGS)
-
-gvalhalla_VALAFLAGS = \
-	$(valhalla_VALAFLAGS)
-
-gvalhalla_LDADD = \
-	$(valhalla_LDADD)
+gvalhalla$(EXEEXT):
+	cp valhalla gvalhalla
