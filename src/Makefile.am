@@ -1,44 +1,64 @@
-bin_PROGRAMS = valhalla gvalhalla
+lib_LTLIBRARIES = libvalhalla.la
+bin_PROGRAMS = valhalla valhalla-screenshot
 
 
-valhalla_SOURCES = \
-	utils.vala \
-	utils-config.vala \
-	utils-c.c \
-	utils-files.vala \
-	utils-screenshot.vala \
-	utils-ui.vala \
-	main.vala
+libvalhalla_la_SOURCES = \
+	module-api.vala
 
-valhalla_CFLAGS = \
+libvalhalla_la_VALAFLAGS = \
+	--pkg gio-2.0 \
+	--pkg gee-0.8 \
+	--pkg gtk+-3.0 \
+	--library valhalla \
+	-H valhalla.h \
+	--vapi $(top_srcdir)/vapi/valhalla.vapi \
+	--enable-experimental-non-null
+
+libvalhalla_la_CFLAGS = \
+	-DVALHALLA_MODULES_MODULEDIR=\"$(pkglibdir)\" \
 	$(valhalla_U_CFLAGS)
 
-valhalla_VALAFLAGS = \
-	--pkg gio-2.0 \
-	--pkg readline \
-	--pkg posix \
-	--pkg linux \
-	--pkg zlib \
-	--pkg libmagic \
-	--pkg gdk-3.0 \
-	--pkg gtk+-3.0 \
-	--pkg gmodule-2.0 \
-	--pkg libsoup-2.4 \
-	--pkg sqlite3 \
-	--pkg flock \
-	--thread \
-	--vapidir $(top_srcdir)/vapi \
-	--enable-experimental-non-null \
-	--target-glib $(GLIB_REQUIRED) \
-	--gresources $(top_srcdir)/data/so.bob131.valhalla.gresources.xml
-
-valhalla_LDADD = \
-	-lm \
-	-lmagic \
+libvalhalla_la_LIBADD = \
 	$(valhalla_U_LIBS)
 
 
-.PHONY: gvalhalla
+valhalla_SOURCES = \
+	../data/so.bob131.valhalla.gresources.c \
+	config.vala \
+	database.vala \
+	gtk-widgets.vala \
+	modules.vala \
+	screenshot.vala \
+	thumbnailer.vala \
+	valhalla.vala
 
-gvalhalla$(EXEEXT):
-	cp valhalla gvalhalla
+valhalla_VALAFLAGS = \
+	--pkg gio-2.0 \
+	--pkg gee-0.8 \
+	--pkg gtk+-3.0 \
+	--pkg gmodule-2.0 \
+	--pkg zlib \
+	--pkg libnotify \
+	--pkg posix \
+	--pkg sqlite3 \
+	--pkg valhalla \
+	--vapidir $(top_srcdir)/vapi \
+	--target-glib $(GLIB_REQUIRED) \
+	--gresources $(top_srcdir)/data/so.bob131.valhalla.gresources.xml
+
+valhalla_CFLAGS = \
+	-DVALHALLA_MODULES_MODULEDIR=\"$(pkglibdir)\" \
+	$(valhalla_U_CFLAGS)
+
+valhalla_LDADD = \
+	-lm \
+	$(libvalhalla_la_OBJECTS) \
+	$(valhalla_U_LIBS)
+
+
+valhalla_screenshot_SOURCES = valhalla-screenshot.vala
+valhalla_screenshot_VALAFLAGS = \
+	--pkg gio-2.0 \
+	--target-glib $(GLIB_REQUIRED)
+valhalla_screenshot_CFLAGS = $(valhalla_CFLAGS)
+valhalla_screenshot_LDADD = $(valhalla_U_LIBS)

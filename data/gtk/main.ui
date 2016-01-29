@@ -1,0 +1,235 @@
+<interface>
+  <template class="ValhallaWidgetsMainWindow" parent="GtkApplicationWindow">
+    <property name="width_request">700</property>
+    <property name="height_request">600</property>
+    <child type="titlebar">
+      <object class="GtkStack" id="headerbar_stack">
+        <property name="transition-type">crossfade</property>
+        <child>
+          <object class="GtkHeaderBar" id="main_headerbar">
+            <property name="show-close-button">True</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">0</property>
+                <child>
+                  <object class="GtkRevealer" id="back_reveal">
+                    <property name="transition-type">slide-right</property>
+                    <property name="reveal-child">false</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">6</property>
+                        <child>
+                          <object class="GtkButton">
+                            <signal name="clicked" handler="back_button_clicked"/>
+                            <style>
+                              <class name="image-button"/>
+                            </style>
+                            <child>
+                              <object class="GtkImage">
+                                <property name="icon-name">go-previous-symbolic</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkSeparator">
+                            <property name="orientation">vertical</property>
+                            <property name="margin-right">6</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton">
+                    <property name="margin-right">6</property>
+                    <signal name="clicked" handler="upload_clicked"/>
+                    <style>
+                      <class name="image-button"/>
+                    </style>
+                    <child>
+                      <object class="GtkImage">
+                        <property name="icon-name">document-send-symbolic</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton">
+                    <signal name="clicked" handler="capture_screenshot"/>
+                    <style>
+                      <class name="image-button"/>
+                    </style>
+                    <child>
+                      <object class="GtkImage">
+                        <property name="icon-name">video-display-symbolic</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child type="title">
+              <object class="GtkStackSwitcher">
+                <property name="stack">main_window_stack</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkRevealer" id="select_reveal">
+                <property name="transition-type">slide-left</property>
+                <property name="reveal-child">true</property>
+                <child>
+                  <object class="GtkToggleButton" id="select_button">
+                    <signal name="toggled" handler="select_toggle_on"/>
+                    <style>
+                      <class name="image-button"/>
+                    </style>
+                    <child>
+                      <object class="GtkImage">
+                        <property name="icon-name">object-select-symbolic</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="pack-type">end</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkRevealer" id="transfers_clear_reveal">
+                <property name="transition-type">slide-left</property>
+                <property name="reveal-child">false</property>
+                <child>
+                  <object class="GtkButton" id="transfers_clear_button">
+                    <style>
+                      <class name="image-button"/>
+                    </style>
+                    <child>
+                      <object class="GtkImage">
+                        <property name="icon-name">edit-clear-all-symbolic</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="pack-type">end</property>
+              </packing>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkHeaderBar" id="selection_headerbar">
+            <property name="show-close-button">True</property>
+            <style>
+              <class name="selection-mode"/>
+            </style>
+            <child>
+              <object class="GtkButton" id="delete_button">
+                <property name="sensitive">false</property>
+                <style>
+                  <class name="image-button"/>
+                </style>
+                <child>
+                  <object class="GtkImage">
+                    <property name="icon-name">user-trash-symbolic</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child type="title">
+              <object class="GtkLabel" id="selection_indicator">
+                <property name="label">0 files selected</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkToggleButton" id="deselect_button">
+                <property name="active">true</property>
+                <signal name="toggled" handler="select_toggle_off"/>
+                <style>
+                  <class name="image-button"/>
+                </style>
+                <child>
+                  <object class="GtkImage">
+                    <property name="icon-name">object-select-symbolic</property>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="pack-type">end</property>
+              </packing>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="GtkInfoBar" id="error_bar">
+            <property name="show-close-button">false</property>
+            <property name="message-type">error</property>
+            <property name="no-show-all">true</property>
+            <signal name="close" handler="dismiss_error"/>
+            <child internal-child="content_area">
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">6</property>
+                <child>
+                  <object class="GtkImage">
+                    <property name="icon-name">dialog-error</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="error_text"></object>
+                </child>
+              </object>
+            </child>
+            <child internal-child="action_area">
+              <object class="GtkButtonBox">
+                <child>
+                  <object class="GtkButton">
+                    <property name="label">Dismiss</property>
+                    <signal name="clicked" handler="dismiss_error"/>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkStack" id="main_window_stack">
+            <property name="transition-type">crossfade</property>
+            <child>
+              <object class="ValhallaWidgetsFileWindow" id="file_window">
+              </object>
+              <packing>
+                <property name="name">filewindow</property>
+                <property name="title">Files</property>
+              </packing>
+            </child>
+            <child>
+              <object class="ValhallaWidgetsTransfers" id="transfers"></object>
+              <packing>
+                <property name="name">transfers</property>
+                <property name="title">Transfers</property>
+              </packing>
+            </child>
+            <child>
+              <object class="ValhallaWidgetsPreferences"></object>
+              <packing>
+                <property name="name">prefs</property>
+                <property name="title">Preferences</property>
+              </packing>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

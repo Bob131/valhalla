@@ -1,0 +1,22 @@
+<interface>
+  <template class="ValhallaWidgetsPreferencesListModule" parent="GtkBox">
+    <property name="orientation">vertical</property>
+    <property name="spacing">3</property>
+    <property name="margin">6</property>
+    <property name="margin-left">20</property>
+    <property name="margin-right">10</property>
+    <child>
+      <object class="GtkLabel" id="module_name">
+        <property name="halign">end</property>
+        <property name="justify">right</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkLabel" id="module_description">
+        <property name="halign">end</property>
+        <property name="justify">right</property>
+        <property name="use-markup">true</property>
+      </object>
+    </child>
+  </template>
+</interface>

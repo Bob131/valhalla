@@ -10,11 +10,10 @@ License:	GPLv3
 URL:		https://github.com/Bob131/valhalla
 Source0:	%{url}/archive/%{commit}.zip
 
-BuildRequires:	vala vala-tools readline-devel gtk3-devel sqlite-devel file-devel libsoup-devel
-Requires:       readline gtk3 sqlite file-libs libsoup
+BuildRequires:	vala vala-tools gtk3-devel libgee-devel sqlite-devel libnotify-devel zlib-devel libsoup-devel
 
 %description
-Command line utility for sharing files
+Utility for sharing files
 
 
 %prep
@@ -23,20 +22,21 @@ Command line utility for sharing files
 %build
 NOCONFIGURE=1 ./autogen.sh
 %configure
-make %{?_smp_mflags}
+make
 
 %install
 make install DESTDIR=%{buildroot}
+libtool --finish %{buildroot}%{_libdir}/valhalla
 
 %files
-%{_datadir}/glib-2.0/schemas/so.bob131.valhalla.gschema.xml
 %{_bindir}/*
+%{_datadir}/*
+%{_libdir}/*
+%exclude %{_libdir}/*.a
+%exclude %{_libdir}/%{name}/*.la
 
 %post
 /sbin/ldconfig
 
 %postun
 /sbin/ldconfig
-
-%posttrans
-/usr/bin/glib-compile-schemas %{_datadir}/glib-2.0/schemas > /dev/null 2>&1

@@ -1,0 +1,19 @@
+<interface>
+  <template class="ValhallaWidgetsPreferences" parent="GtkBox">
+    <property name="orientation">horizontal</property>
+    <child>
+      <object class="GtkListBox" id="modules">
+        <property name="vexpand">True</property>
+        <signal name="row_selected" handler="module_selected"/>
+      </object>
+    </child>
+    <child>
+      <object class="GtkBox" id="controls">
+        <property name="orientation">vertical</property>
+        <property name="expand">True</property>
+        <property name="margin">18</property>
+        <property name="spacing">6</property>
+      </object>
+    </child>
+  </template>
+</interface>
