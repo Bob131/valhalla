@@ -288,6 +288,8 @@ namespace Valhalla.Widgets {
         private Gtk.Button forget_button;
         [GtkChild]
         private Gtk.Button delete_button;
+        [GtkChild]
+        private Gtk.Revealer delete_spinner_reveal;
 
         // allow signal callbacks to fire before we've actually been destroyed
         public signal void start_destroy();
@@ -351,15 +353,23 @@ namespace Valhalla.Widgets {
                 var msg = new Gtk.MessageDialog((Application.get_default() as valhalla).window,
                     Gtk.DialogFlags.MODAL, Gtk.MessageType.QUESTION, Gtk.ButtonsType.YES_NO, "%s",
                     "Are you sure you want to delete this file? This action cannot be undone");
-                if (msg.run() == Gtk.ResponseType.YES)
+                if (msg.run() == Gtk.ResponseType.YES) {
+                    forget_button.sensitive = false;
+                    delete_button.sensitive = false;
+                    delete_spinner_reveal.reveal_child = true;
                     file.module.delete.begin(file.remote_path, (obj, res) => {
                         try {
                             file.module.delete.end(res);
                             file.remove_from_database();
+                            (Application.get_default() as valhalla).window.stack_notify("File deleted");
                         } catch (Valhalla.Error e) {
                             (Application.get_default() as valhalla).window.display_error(e.message);
                         }
+                        forget_button.sensitive = true;
+                        delete_button.sensitive = true;
+                        delete_spinner_reveal.reveal_child = false;
                     });
+                }
                 msg.destroy();
             });
 

@@ -68,11 +68,28 @@
               </object>
             </child>
             <child>
-              <object class="GtkButton" id="delete_button">
-                <property name="label">Delete</property>
-                <style>
-                  <class name="destructive-action"/>
-                </style>
+              <object class="GtkBox">
+                <property name="spacing">0</property>
+                <child>
+                  <object class="GtkButton" id="delete_button">
+                    <property name="label">Delete</property>
+                    <style>
+                      <class name="destructive-action"/>
+                    </style>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkRevealer" id="delete_spinner_reveal">
+                    <property name="transition-type">slide-right</property>
+                    <property name="reveal-child">false</property>
+                    <property name="margin-left">6</property>
+                    <child>
+                      <object class="GtkSpinner">
+                        <property name="active">true</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
               </object>
             </child>
           </object>
