@@ -142,6 +142,16 @@ namespace Valhalla.Widgets {
                     throw new Valhalla.Error.CANCELLED("");
             }
             _remote_path = path;
+
+            // generate thumbnail now
+            var dummy = new Database.RemoteFile();
+            dummy.remote_path = path;
+            dummy.file_type = this.file_type;
+            dummy.local_filename = this.local_filename;
+            dummy.crc32 = this.crc32;
+            Thumbnailer.get_thumbnail.begin(dummy, (obj, res) => {
+                Thumbnailer.get_thumbnail.end(res);
+            });
         }
 
         public TransferWidget.from_path(string path) {
@@ -711,6 +721,7 @@ namespace Valhalla.Widgets {
                         screenshot.save_to_stream(streams.output_stream, "png");
                         kickoff_upload.begin(file.get_path(), true, (obj, res) => {
                             kickoff_upload.end(res);
+                            file.delete();
                         });
                     }
                 }

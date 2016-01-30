@@ -29,6 +29,7 @@ namespace Valhalla.Database {
         public signal void committed();
 
         private void delete_file(RemoteFile file) {
+            Thumbnailer.delete_thumbnail(file);
             Sqlite.Statement stmt;
             db.prepare_v2("DELETE FROM Files WHERE remote_path = $remote_path", -1, out stmt);
             stmt.bind_text(stmt.bind_parameter_index("$remote_path"), file.remote_path);

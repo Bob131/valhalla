@@ -24,7 +24,7 @@ namespace Valhalla.Modules {
             else
                 us = Path.get_dirname(Path.build_filename(Environment.get_current_dir(), arg0));
             if (us.has_suffix(".libs"))
-                us = Path.build_filename(us, "../");
+                us = Path.build_filename(us, "..");
             return us;
         }
         try {

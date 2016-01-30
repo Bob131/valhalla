@@ -51,6 +51,7 @@ valhalla_VALAFLAGS = \
 	--pkg libnotify \
 	--pkg posix \
 	--pkg sqlite3 \
+	--pkg libsoup-2.4 \
 	--pkg gd-1.0 \
 	--pkg valhalla \
 	--vapidir $(top_srcdir)/vapi \
