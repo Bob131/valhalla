@@ -1,7 +1,7 @@
 AC_INIT([valhalla],[0.0])
 
 AC_CONFIG_AUX_DIR([build-aux])
-AC_CONFIG_MACRO_DIRS([m4])
+AC_CONFIG_MACRO_DIR([m4])
 
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 
@@ -31,16 +31,22 @@ PKG_CHECK_MODULES(valhalla_U, [
 
 AC_SUBST([GLIB_REQUIRED])
 
+LT_INIT([dlopen])
+
+LIBGD_INIT([
+	notification
+	vapi
+])
+
 dnl ###########################################################################
 dnl Files to generate
 dnl ###########################################################################
 
-LT_INIT([dlopen])
-
 AC_CONFIG_FILES([
 Makefile
+libgd/Makefile
+data/Makefile
 src/Makefile
 src/modules/Makefile
-data/Makefile
 ])
 AC_OUTPUT

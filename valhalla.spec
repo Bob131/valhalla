@@ -3,7 +3,7 @@
 Name:		valhalla
 Version:	0
 Release:	%{date}git%{shortcommit}%{?dist}
-Summary:	Command line file upload manager
+Summary:	File upload manager
 
 Group:		Applications/Internet
 License:	GPLv3
@@ -14,6 +14,13 @@ BuildRequires:	vala vala-tools gtk3-devel libgee-devel sqlite-devel libnotify-de
 
 %description
 Utility for sharing files
+
+%package devel
+Summary:  Headers for developing Valhalla plugins
+Group:    Development/Libraries
+Requires: %{name}%{?_isa} = %{version}-%{release}
+%description devel
+Valhalla is a utility for sharing files. This package allows you to develop plugins for Valhalla
 
 
 %prep
@@ -32,8 +39,13 @@ libtool --finish %{buildroot}%{_libdir}/valhalla
 %{_bindir}/*
 %{_datadir}/*
 %{_libdir}/*
+%exclude %{_datadir}/vala/vapi/valhalla.vapi
 %exclude %{_libdir}/*.a
 %exclude %{_libdir}/%{name}/*.la
+
+%files devel
+%{_datadir}/vala/vapi/valhalla.vapi
+%{_includedir}/valhalla.h
 
 %post
 /sbin/ldconfig

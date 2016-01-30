@@ -203,29 +203,33 @@
           </object>
         </child>
         <child>
-          <object class="GtkStack" id="main_window_stack">
-            <property name="transition-type">crossfade</property>
+          <object class="GtkOverlay" id="stack_overlay">
             <child>
-              <object class="ValhallaWidgetsFileWindow" id="file_window">
+              <object class="GtkStack" id="main_window_stack">
+                <property name="transition-type">crossfade</property>
+                <child>
+                  <object class="ValhallaWidgetsFileWindow" id="file_window">
+                  </object>
+                  <packing>
+                    <property name="name">filewindow</property>
+                    <property name="title">Files</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="ValhallaWidgetsTransfers" id="transfers"></object>
+                  <packing>
+                    <property name="name">transfers</property>
+                    <property name="title">Transfers</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="ValhallaWidgetsPreferences"></object>
+                  <packing>
+                    <property name="name">prefs</property>
+                    <property name="title">Preferences</property>
+                  </packing>
+                </child>
               </object>
-              <packing>
-                <property name="name">filewindow</property>
-                <property name="title">Files</property>
-              </packing>
-            </child>
-            <child>
-              <object class="ValhallaWidgetsTransfers" id="transfers"></object>
-              <packing>
-                <property name="name">transfers</property>
-                <property name="title">Transfers</property>
-              </packing>
-            </child>
-            <child>
-              <object class="ValhallaWidgetsPreferences"></object>
-              <packing>
-                <property name="name">prefs</property>
-                <property name="title">Preferences</property>
-              </packing>
             </child>
           </object>
         </child>

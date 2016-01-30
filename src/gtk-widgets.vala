@@ -111,6 +111,8 @@ namespace Valhalla.Widgets {
         [GtkChild]
         private Gtk.Label file_name_label;
         [GtkChild]
+        private Gtk.Button copy_button;
+        [GtkChild]
         private Gtk.Button cancel_button;
         [GtkChild]
         private Gtk.ProgressBar progress_bar;
@@ -160,6 +162,11 @@ namespace Valhalla.Widgets {
             status = "Initializing...";
             progress_bar.pulse();
 
+            copy_button.clicked.connect(() => {
+                var clipboard = Gtk.Clipboard.get_default(Gdk.Display.get_default());
+                clipboard.set_text(remote_path, remote_path.length);
+                (Application.get_default() as valhalla).window.stack_notify("URL copied to clipboard");
+            });
             cancel_button.clicked.connect(() => {
                 if (status == "Upload failed" || status == "Done!")
                     this.destroy();
@@ -171,6 +178,8 @@ namespace Valhalla.Widgets {
             Timeout.add(500, () => {
                 if (pulse)
                     progress_bar.pulse();
+                else
+                    cancel_button.sensitive = true;
                 return pulse;
             });
             this.progress.connect((bytes) => {
@@ -195,6 +204,7 @@ namespace Valhalla.Widgets {
             });
             this.completed.connect(() => {
                 pulse = false;
+                copy_button.sensitive = true;
                 status = "Done!";
                 progress_bar.fraction = 1;
                 new Notify.Notification("Upload complete",
@@ -571,6 +581,12 @@ namespace Valhalla.Widgets {
         [GtkChild]
         private Gtk.HeaderBar selection_headerbar;
         [GtkChild]
+        private Gtk.InfoBar error_bar;
+        [GtkChild]
+        private Gtk.Label error_text;
+        [GtkChild]
+        private Gtk.Overlay stack_overlay;
+        [GtkChild]
         private Gtk.Stack main_window_stack;
         [GtkChild]
         public Gtk.Revealer back_reveal;
@@ -588,16 +604,22 @@ namespace Valhalla.Widgets {
         public Gtk.Button delete_button;
         [GtkChild]
         public Gtk.Label selection_indicator;
-        [GtkChild]
-        private Gtk.InfoBar error_bar;
-        [GtkChild]
-        private Gtk.Label error_text;
 
         public void display_error(string text) {
             error_text.label = text.strip();
             error_bar.get_action_area().show_all();
             error_bar.get_content_area().show_all();
             error_bar.visible = true;
+        }
+
+        public void stack_notify(string message) {
+            var notification = new Gd.Notification();
+            notification.timeout = 2;
+            var msg = new Gtk.Label(message);
+            msg.margin = 6;
+            notification.add(msg);
+            notification.show_all();
+            stack_overlay.add_overlay(notification);
         }
 
         [GtkCallback]
@@ -612,7 +634,7 @@ namespace Valhalla.Widgets {
 
         private delegate void SignalCallback();
 
-        private async void kickoff_upload(string path) {
+        private async void kickoff_upload(string path, bool switch_view = true) {
             // allow any pending Gtk events (like dialog destruction) to complete
             // before we continue
             Idle.add(kickoff_upload.callback);
@@ -624,12 +646,17 @@ namespace Valhalla.Widgets {
                 return;
             }
             transfer.completed.connect(() => {
-                main_window_stack.child_set(transfers, "needs-attention", true);
+                if (!(main_window_stack.visible_child is Transfers))
+                    main_window_stack.child_set(transfers, "needs-attention", true);
             });
             transfer.failed.connect(() => {
-                main_window_stack.child_set(transfers, "needs-attention", true);
+                if (!(main_window_stack.visible_child is Transfers))
+                    main_window_stack.child_set(transfers, "needs-attention", true);
             });
-            main_window_stack.visible_child = transfers;
+            if (switch_view)
+                main_window_stack.visible_child = transfers;
+            else if (!(main_window_stack.visible_child is Transfers))
+                main_window_stack.child_set(transfers, "needs-attention", true);
             transfers.add(transfer);
             try {
                 yield module.upload(transfer);
@@ -651,7 +678,7 @@ namespace Valhalla.Widgets {
             var response = dialog.run();
             dialog.close();
             if (response == Gtk.ResponseType.ACCEPT) {
-                kickoff_upload.begin(dialog.get_filename(), (obj, res) => {
+                kickoff_upload.begin(dialog.get_filename(), true, (obj, res) => {
                     kickoff_upload.end(res);
                 });
             }
@@ -682,7 +709,7 @@ namespace Valhalla.Widgets {
                         FileIOStream streams;
                         var file = File.new_tmp("valhalla_XXXXXX.png", out streams);
                         screenshot.save_to_stream(streams.output_stream, "png");
-                        kickoff_upload.begin(file.get_path(), (obj, res) => {
+                        kickoff_upload.begin(file.get_path(), true, (obj, res) => {
                             kickoff_upload.end(res);
                         });
                     }

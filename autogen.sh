@@ -27,7 +27,8 @@ set -e
 srcdir=`dirname $0`
 test -z "$srcdir" && srcdir=.
 
-aclocal --install
+aclocal -I m4 --install
+cp libgd/libgd.m4 m4
 autoreconf --force --install
 
 if [ -z "$NOCONFIGURE" ]; then

@@ -1,6 +1,11 @@
 lib_LTLIBRARIES = libvalhalla.la
 bin_PROGRAMS = valhalla valhalla-screenshot
 
+valhallavapidir = $(datadir)/vala/vapi
+valhallavapi_DATA = $(top_srcdir)/vapi/valhalla.vapi
+valhallaheaderdir = $(includedir)
+valhallaheader_DATA = valhalla.h
+
 
 libvalhalla_la_SOURCES = \
 	module-api.vala
@@ -22,6 +27,11 @@ libvalhalla_la_LIBADD = \
 	$(valhalla_U_LIBS)
 
 
+gd.vapi:
+	cp $(top_srcdir)/libgd/gd-1.0.vapi $(top_srcdir)/vapi
+
+BUILT_SOURCES = gd.vapi
+
 valhalla_SOURCES = \
 	../data/so.bob131.valhalla.gresources.c \
 	config.vala \
@@ -41,6 +51,7 @@ valhalla_VALAFLAGS = \
 	--pkg libnotify \
 	--pkg posix \
 	--pkg sqlite3 \
+	--pkg gd-1.0 \
 	--pkg valhalla \
 	--vapidir $(top_srcdir)/vapi \
 	--target-glib $(GLIB_REQUIRED) \
@@ -48,10 +59,12 @@ valhalla_VALAFLAGS = \
 
 valhalla_CFLAGS = \
 	-DVALHALLA_MODULES_MODULEDIR=\"$(pkglibdir)\" \
+	-I $(top_srcdir)/libgd \
 	$(valhalla_U_CFLAGS)
 
 valhalla_LDADD = \
 	-lm \
+	$(top_builddir)/libgd/libgd.la \
 	$(libvalhalla_la_OBJECTS) \
 	$(valhalla_U_LIBS)
 

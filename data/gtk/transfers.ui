@@ -11,15 +11,35 @@
           <object class="GtkLabel" id="file_name_label"></object>
         </child>
         <child>
-          <object class="GtkButton" id="cancel_button">
+          <object class="GtkBox">
+            <property name="orientation">horizontal</property>
+            <property name="spacing">6</property>
             <property name="hexpand">true</property>
             <property name="halign">end</property>
-            <style>
-              <class name="image-button"/>
-            </style>
             <child>
-              <object class="GtkImage">
-                <property name="icon-name">edit-delete-symbolic</property>
+              <object class="GtkButton" id="copy_button">
+                <property name="sensitive">false</property>
+                <style>
+                  <class name="image-button"/>
+                </style>
+                <child>
+                  <object class="GtkImage">
+                    <property name="icon-name">edit-copy-symbolic</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="cancel_button">
+                <property name="sensitive">false</property>
+                <style>
+                  <class name="image-button"/>
+                </style>
+                <child>
+                  <object class="GtkImage">
+                    <property name="icon-name">edit-delete-symbolic</property>
+                  </object>
+                </child>
               </object>
             </child>
           </object>

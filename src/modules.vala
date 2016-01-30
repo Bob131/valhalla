@@ -18,9 +18,14 @@ namespace Valhalla.Modules {
         if ("_" in Environment.list_variables())
             return Path.get_dirname(Environment.get_variable("_"));
         else if (arg0 != null && "valhalla" in arg0) {
+            string us;
             if (Path.is_absolute(arg0))
-                return Path.get_dirname(arg0);
-            return Path.get_dirname(Path.build_filename(Environment.get_current_dir(), arg0));
+                us = Path.get_dirname(arg0);
+            else
+                us = Path.get_dirname(Path.build_filename(Environment.get_current_dir(), arg0));
+            if (us.has_suffix(".libs"))
+                us = Path.build_filename(us, "../");
+            return us;
         }
         try {
             return FileUtils.read_link("/proc/self/exe");
