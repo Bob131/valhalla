@@ -625,6 +625,12 @@ namespace Valhalla.Widgets {
         [GtkChild]
         public Gtk.Label selection_indicator;
 
+        public bool one_shot = false; // this is true if we've just been launched
+                                      // for the purpose of capturing a screenshot.
+                                      // If the user cancels a capture when this
+                                      // is true, we want to outright exit instead
+                                      // of (re)displaying `this`
+
         public void display_error(string text) {
             error_text.label = text.strip();
             error_bar.get_action_area().show_all();
@@ -705,38 +711,37 @@ namespace Valhalla.Widgets {
         }
 
         [GtkCallback]
-        public void capture_screenshot() {
+        public async void capture_screenshot() {
             var module = Modules.get_active_module();
             if (module == null) {
                 display_error("Please configure a module in the preferences panel");
                 return;
             }
             this.visible = false;
-            Screenshot.take_interactive.begin((obj, res) => {
-                var screenshot = Screenshot.take_interactive.end(res);
-                if (screenshot != null) {
-                    var dialog = new Gtk.Dialog.with_buttons("New screenshot", this,
-                        Gtk.DialogFlags.USE_HEADER_BAR, "_Cancel", Gtk.ResponseType.CANCEL,
-                        "_Upload", Gtk.ResponseType.OK);
-                    var inner = dialog.get_content_area();
-                    inner.border_width = 0;
-                    inner.add(new Gtk.Image.from_pixbuf(
-                        Screenshot.scale_for_preview(screenshot, this.get_screen())));
-                    inner.show_all();
-                    var response = dialog.run();
-                    dialog.close();
-                    if (response == Gtk.ResponseType.OK) {
-                        FileIOStream streams;
-                        var file = File.new_tmp("valhalla_XXXXXX.png", out streams);
-                        screenshot.save_to_stream(streams.output_stream, "png");
-                        kickoff_upload.begin(file.get_path(), true, (obj, res) => {
-                            kickoff_upload.end(res);
-                            file.delete();
-                        });
-                    }
+            var screenshot = yield Screenshot.take_interactive();
+            if (screenshot != null) {
+                var dialog = new Gtk.Dialog.with_buttons("New screenshot", this,
+                    Gtk.DialogFlags.USE_HEADER_BAR, "_Cancel", Gtk.ResponseType.CANCEL,
+                    "_Upload", Gtk.ResponseType.OK);
+                var inner = dialog.get_content_area();
+                inner.border_width = 0;
+                inner.add(new Gtk.Image.from_pixbuf(
+                    Screenshot.scale_for_preview(screenshot, this.get_screen())));
+                inner.show_all();
+                var response = dialog.run();
+                dialog.close();
+                if (response == Gtk.ResponseType.OK) {
+                    FileIOStream streams;
+                    var file = File.new_tmp("valhalla_XXXXXX.png", out streams);
+                    screenshot.save_to_stream(streams.output_stream, "png");
+                    kickoff_upload.begin(file.get_path(), true, (obj, res) => {
+                        kickoff_upload.end(res);
+                        file.delete();
+                    });
                 }
-                this.visible = true;
-            });
+            } else if (this.one_shot)
+                this.close();
+            this.visible = true;
         }
 
         [GtkCallback]

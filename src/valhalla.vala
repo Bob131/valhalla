@@ -38,8 +38,9 @@ class valhalla : Gtk.Application {
 
         var hooks = new DBusHooks();
         hooks.capture_screenshot_signal.connect(() => {
-            this.activate();
-            window.capture_screenshot();
+            activate();
+            window.one_shot = true;
+            window.capture_screenshot.begin();
         });
 
         connection.register_object(object_path, hooks);
