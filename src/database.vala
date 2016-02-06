@@ -74,15 +74,16 @@ namespace Valhalla.Database {
         }
 
         public RemoteFile[] get_files() {
-            RemoteFile[] files = {};
+            var files = new Array<RemoteFile>();
             Sqlite.Statement stmt;
             db.prepare_v2("SELECT * FROM Files", -1, out stmt);
             while (stmt.step() == Sqlite.ROW) {
                 var file = build_file(stmt);
                 if (file != null)
-                    files += file;
+                    files.prepend_val(file); // prepend so that they're sorted by
+                                             // ascending age
             }
-            return files;
+            return files.data;
         }
 
         public void commit_transfer(Widgets.TransferWidget file) {
