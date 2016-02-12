@@ -178,7 +178,7 @@ namespace Valhalla.Widgets {
                 (Application.get_default() as valhalla).window.stack_notify("URL copied to clipboard");
             });
             cancel_button.clicked.connect(() => {
-                if (status == "Upload failed" || status == "Done!")
+                if (status == "Upload failed" || status == "Cancelled" || status == "Done!")
                     this.destroy();
                 else
                     this.cancellable.cancel();
@@ -225,7 +225,9 @@ namespace Valhalla.Widgets {
         }
     }
 
-    class Transfers : Gtk.ListBox {
+    class Transfers : Gtk.Box {
+        private Gtk.ListBox listbox;
+
         public override void add(Gtk.Widget widget) {
             if (!(widget is Gtk.ListBoxRow)) {
                 var entry = new Gtk.ListBoxRow();
@@ -234,19 +236,13 @@ namespace Valhalla.Widgets {
                 });
                 entry.add(widget);
                 entry.show_all();
-                base.add(entry);
+                listbox.add(entry);
             } else
-                base.add(widget);
-        }
-
-        public override void row_activated(Gtk.ListBoxRow row) {
-            var transfer = row.get_child() as TransferWidget;
-            if (transfer.status == "Done!")
-                AppInfo.launch_default_for_uri(transfer.remote_path, null);
+                listbox.add(widget);
         }
 
         public void clear() {
-            this.foreach((row) => {
+            listbox.foreach((row) => {
                 var transfer = (row as Gtk.ListBoxRow).get_child() as TransferWidget;
                 if (transfer.status == "Done!" || transfer.status == "Upload failed"
                         || transfer.status == "Cancelled")
@@ -255,8 +251,14 @@ namespace Valhalla.Widgets {
         }
 
         construct {
-            this.selection_mode = Gtk.SelectionMode.NONE;
-            this.activate_on_single_click = true;
+            listbox = new Gtk.ListBox();
+            listbox.row_activated.connect((row) => {
+                var transfer = row.get_child() as TransferWidget;
+                if (transfer.status == "Done!")
+                    AppInfo.launch_default_for_uri(transfer.remote_path, null);
+            });
+            listbox.selection_mode = Gtk.SelectionMode.NONE;
+            listbox.activate_on_single_click = true;
 
             var placeholder = new Gtk.Box(Gtk.Orientation.VERTICAL, 6);
             placeholder.add(new Gtk.Image.from_icon_name("network-idle-symbolic",
@@ -266,7 +268,14 @@ namespace Valhalla.Widgets {
             placeholder.valign = Gtk.Align.CENTER;
             placeholder.sensitive = false;
             placeholder.show_all();
-            this.set_placeholder(placeholder);
+            listbox.set_placeholder(placeholder);
+
+            var list_window = new Gtk.ScrolledWindow(null, null);
+            list_window.hscrollbar_policy = Gtk.PolicyType.NEVER;
+            list_window.expand = true;
+            list_window.add(listbox);
+            base.add(list_window);
+            this.show_all();
         }
     }
 
@@ -663,7 +672,7 @@ namespace Valhalla.Widgets {
 
         private delegate void SignalCallback();
 
-        private async void kickoff_upload(string path, bool switch_view = true) {
+        public async void kickoff_upload(string path, bool switch_view = true) {
             // allow any pending Gtk events (like dialog destruction) to complete
             // before we continue
             Idle.add(kickoff_upload.callback);

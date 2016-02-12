@@ -21,9 +21,10 @@ class valhalla : Gtk.Application {
     public Widgets.MainWindow window;
     public Database.Database database;
 
-    // stub
     protected override void open(File[] files, string _) {
-        ;
+        activate();
+        foreach (var file in files)
+            window.kickoff_upload.begin(file.get_path());
     }
 
     protected override void activate() {

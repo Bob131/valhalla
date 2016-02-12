@@ -208,20 +208,14 @@
               <object class="GtkStack" id="main_window_stack">
                 <property name="transition-type">crossfade</property>
                 <child>
-                  <object class="ValhallaWidgetsFileWindow" id="file_window">
-                  </object>
+                  <object class="ValhallaWidgetsFileWindow" id="file_window"></object>
                   <packing>
                     <property name="name">filewindow</property>
                     <property name="title">Files</property>
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkScrolledWindow">
-                    <property name="hscrollbar-policy">never</property>
-                    <child>
-                      <object class="ValhallaWidgetsTransfers" id="transfers"></object>
-                    </child>
-                  </object>
+                  <object class="ValhallaWidgetsTransfers" id="transfers"></object>
                   <packing>
                     <property name="name">transfers</property>
                     <property name="title">Transfers</property>
