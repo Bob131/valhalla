@@ -28,9 +28,13 @@ class valhalla : Gtk.Application {
 
     protected override void activate() {
         Config.load();
-        database = new Database.Database();
-        window = new Widgets.MainWindow();
-        this.add_window(window);
+        if (database == null)
+            database = new Database.Database();
+        if (window == null) {
+            window = new Widgets.MainWindow();
+            this.add_window(window);
+        } else
+            window.present();
     }
 
     protected override bool dbus_register(DBusConnection connection, string object_path) throws GLib.Error {

@@ -61,6 +61,8 @@ namespace Valhalla.Config {
     }
 
     public void load() {
+        if (settings != null)
+            return;
         init_keyfile();
         settings = new MutableSettings(keyfile, "valhalla");
         foreach (var module in Modules.get_modules()) {
