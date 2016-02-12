@@ -582,7 +582,10 @@ namespace Valhalla.Widgets {
                 this.add_named(displayfile, "filedisplay");
                 this.set_visible_child_full("filedisplay", Gtk.StackTransitionType.SLIDE_LEFT);
             });
-            this.add_named(files, "files");
+            var list_window = new Gtk.ScrolledWindow(null, null);
+            list_window.hscrollbar_policy = Gtk.PolicyType.NEVER;
+            list_window.add(files);
+            this.add_named(list_window, "files");
 
             this.show_all();
         }

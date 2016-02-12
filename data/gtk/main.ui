@@ -216,7 +216,12 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="ValhallaWidgetsTransfers" id="transfers"></object>
+                  <object class="GtkScrolledWindow">
+                    <property name="hscrollbar-policy">never</property>
+                    <child>
+                      <object class="ValhallaWidgetsTransfers" id="transfers"></object>
+                    </child>
+                  </object>
                   <packing>
                     <property name="name">transfers</property>
                     <property name="title">Transfers</property>

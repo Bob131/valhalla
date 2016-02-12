@@ -2,9 +2,14 @@
   <template class="ValhallaWidgetsPreferences" parent="GtkBox">
     <property name="orientation">horizontal</property>
     <child>
-      <object class="GtkListBox" id="modules">
-        <property name="vexpand">True</property>
-        <signal name="row_selected" handler="module_selected"/>
+      <object class="GtkScrolledWindow">
+        <property name="hscrollbar-policy">never</property>
+        <child>
+          <object class="GtkListBox" id="modules">
+            <property name="vexpand">True</property>
+            <signal name="row_selected" handler="module_selected"/>
+          </object>
+        </child>
       </object>
     </child>
     <child>
