@@ -16,7 +16,6 @@ class DBusHooks : Object {
 // * module index functionality
 // * ShareX JSON parser module
 // * about dialog
-// * drag and drop
 class valhalla : Gtk.Application {
     public Widgets.MainWindow window;
     public Database.Database database;

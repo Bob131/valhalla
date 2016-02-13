@@ -453,9 +453,7 @@ namespace Valhalla.Widgets {
 
     class Files : Gtk.ListBox {
         private Database.Database db;
-        private bool vals_set = false;
         private Gtk.Button delete_button;
-        private Gtk.Label selection_indicator;
 
         private void populate() {
             this.foreach((row) => {
@@ -493,14 +491,24 @@ namespace Valhalla.Widgets {
             return files;
         }
 
+        public override void drag_data_received(Gdk.DragContext context, int _,
+                int __, Gtk.SelectionData data, uint ___, uint time) {
+            Gtk.drag_finish(context, true, false, time);
+            foreach (var path in data.get_uris()) {
+                assert (path.has_prefix("file://"));
+                path = path[7:path.length];
+                (Application.get_default() as valhalla).window.kickoff_upload.begin(path);
+            }
+        }
+
         construct {
             var app = Application.get_default() as valhalla;
             db = app.database;
 
             this.selected_rows_changed.connect(() => {
-                if (!vals_set) {
+                // app.window is null when we get constructed, so set this now
+                if (delete_button == null) {
                     delete_button = app.window.delete_button;
-                    selection_indicator = app.window.selection_indicator;
                     delete_button.clicked.connect(() => {
                         var selected = this.get_selected_rows();
                         var msg = new Gtk.MessageDialog((Application.get_default() as valhalla).window,
@@ -516,16 +524,16 @@ namespace Valhalla.Widgets {
                                 try {
                                     file.module.delete.end(res);
                                     file.remove_from_database();
-                                    (Application.get_default() as valhalla).window.deselect_button.active = false;
+                                    app.window.deselect_button.active = false;
                                 } catch (Valhalla.Error e) {
                                     app.window.display_error(e.message);
                                 }
                             });
                         }
                     });
-                    vals_set = true;
                 }
                 var selected = this.get_selected_rows();
+                var selection_indicator = app.window.selection_indicator;
                 selection_indicator.label = @"$(selected.length) files selected";
                 if (selected.length > 0)
                     delete_button.sensitive = true;
@@ -544,6 +552,10 @@ namespace Valhalla.Widgets {
             placeholder.sensitive = false;
             placeholder.show_all();
             this.set_placeholder(placeholder);
+
+            Gtk.drag_dest_set(this, Gtk.DestDefaults.ALL, {
+                Gtk.TargetEntry () {target = "text/uri-list", flags = 0, info = 0}
+                }, Gdk.DragAction.COPY);
 
             populate();
             db.committed.connect_after((_) => {
