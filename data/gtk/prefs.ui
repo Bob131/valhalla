@@ -13,11 +13,29 @@
       </object>
     </child>
     <child>
-      <object class="GtkBox" id="controls">
+      <object class="GtkBox">
         <property name="orientation">vertical</property>
-        <property name="expand">True</property>
-        <property name="margin">18</property>
-        <property name="spacing">6</property>
+        <property name="margin">6</property>
+        <child>
+          <object class="GtkScrolledWindow">
+            <property name="hscrollbar-policy">never</property>
+            <child>
+              <object class="GtkBox" id="controls">
+                <property name="orientation">vertical</property>
+                <property name="expand">True</property>
+                <property name="spacing">6</property>
+                <property name="margin">12</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton"> <!--TODO-->
+            <property name="valign">end</property>
+            <property name="halign">end</property>
+            <property name="label">Application settings</property>
+          </object>
+        </child>
       </object>
     </child>
   </template>
