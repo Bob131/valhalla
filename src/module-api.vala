@@ -26,20 +26,27 @@ namespace Valhalla {
         public virtual string guess_extension() {
             if (file_type.has_prefix("text/"))
                 return ".txt";
-            var mimetypes = "";
+            var mimetypes = new string[] {};
             foreach (var path in mimetype_locations) {
                 string tmp;
-                FileUtils.get_contents("/etc/mime.types", out tmp);
-                mimetypes += tmp;
+                try {
+                    FileUtils.get_contents(path, out tmp);
+                } catch (FileError e) {
+                    continue;
+                }
+                foreach (var line in tmp.split("\n"))
+                    mimetypes += line;
             }
-            foreach (var line in mimetypes.split("\n"))
+            foreach (var line in mimetypes)
                 if (line.has_prefix(file_type)) {
-                    var cols = line.split(" ", 1);
+                    var cols = Regex.split_simple("\\s+", line);
                     if (cols.length < 2)
                         break;
-                    return @".$(cols[1].strip())";
+                    return @".$(cols[1])";
                 }
-            return "." + file_name.reverse().split(".")[0].reverse();
+            if ("." in file_name)
+                return "." + file_name.reverse().split(".")[0].reverse();
+            return "";
         }
 
         // created for the convinience of derivative implmentations;
