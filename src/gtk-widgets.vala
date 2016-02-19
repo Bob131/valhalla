@@ -553,9 +553,10 @@ namespace Valhalla.Widgets {
             placeholder.show_all();
             this.set_placeholder(placeholder);
 
-            Gtk.drag_dest_set(this, Gtk.DestDefaults.ALL, {
-                Gtk.TargetEntry () {target = "text/uri-list", flags = 0, info = 0}
-                }, Gdk.DragAction.COPY);
+            var drop_targets = new Gtk.TargetList(null);
+            drop_targets.add_uri_targets(0);
+            Gtk.drag_dest_set(this, Gtk.DestDefaults.ALL, null, Gdk.DragAction.COPY);
+            Gtk.drag_dest_set_target_list(this, drop_targets);
 
             populate();
             db.committed.connect_after((_) => {
