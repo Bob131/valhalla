@@ -10,7 +10,7 @@ License:	GPLv3
 URL:		https://github.com/Bob131/valhalla
 Source0:	%{url}/archive/%{commit}.zip
 
-BuildRequires:	vala vala-tools gtk3-devel libgee-devel sqlite-devel libnotify-devel zlib-devel libsoup-devel
+BuildRequires:	vala vala-tools gtk3-devel libgee-devel sqlite-devel libnotify-devel zlib-devel libsoup-devel nautilus-devel
 
 %description
 Utility for sharing files
@@ -39,9 +39,12 @@ libtool --finish %{buildroot}%{_libdir}/valhalla
 %{_bindir}/*
 %{_datadir}/*
 %{_libdir}/*
-%exclude %{_datadir}/vala/vapi/valhalla.vapi
+%exclude %{_libdir}/*.la
 %exclude %{_libdir}/*.a
+%exclude %{_libdir}/nautilus/extensions-3.0/*.la
+%exclude %{_libdir}/nautilus/extensions-3.0/*.a
 %exclude %{_libdir}/%{name}/*.la
+%exclude %{_libdir}/%{name}/*.a
 
 %files devel
 %{_datadir}/vala/vapi/valhalla.vapi

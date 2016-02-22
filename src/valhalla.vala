@@ -11,11 +11,11 @@ class DBusHooks : Object {
 }
 
 // TODO:
-// * nautilus integration
 // * make Modules and Config less garbage
 // * module index functionality
 // * ShareX JSON parser module
 // * about dialog
+// * move all non-UI-specific code into separate lib for alternate UIs
 class valhalla : Gtk.Application {
     public Widgets.MainWindow window;
     public Database.Database database;

@@ -17,6 +17,7 @@ libvalhalla_la_VALAFLAGS = \
 	--library valhalla \
 	-H valhalla.h \
 	--vapi $(top_srcdir)/vapi/valhalla.vapi \
+	--target-glib $(GLIB_REQUIRED) \
 	--enable-experimental-non-null
 
 libvalhalla_la_CFLAGS = \
@@ -76,3 +77,21 @@ valhalla_screenshot_VALAFLAGS = \
 	--target-glib $(GLIB_REQUIRED)
 valhalla_screenshot_CFLAGS = $(valhalla_CFLAGS)
 valhalla_screenshot_LDADD = $(valhalla_U_LIBS)
+
+
+nautilus_extensiondir = $(NAUTILUS_EXTENSION_DIR)
+nautilus_extension_LTLIBRARIES = libnautilus-valhalla.la
+
+libnautilus_valhalla_la_SOURCES = nautilus-extension.vala
+libnautilus_valhalla_la_VALAFLAGS = \
+	--pkg gio-2.0 \
+	--pkg gtk+-3.0 \
+	--pkg nautilus \
+	--vapidir $(top_srcdir)/vapi \
+	--target-glib $(GLIB_REQUIRED)
+libnautilus_valhalla_la_CFLAGS = $(valhalla_U_CFLAGS)
+libnautilus_valhalla_la_LDFLAGS = -module -avoid-version
+libnautilus_valhalla_la_LIBADD = $(valhalla_U_LIBS)
+
+nautilus-extension.c:
+	$(SED) -i "s/(GType\*\* types/(const GType\*\* types/" nautilus-extension.c

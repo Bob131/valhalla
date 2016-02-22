@@ -27,9 +27,12 @@ PKG_CHECK_MODULES(valhalla_U, [
   libnotify
   zlib
   libsoup-2.4
+  libnautilus-extension
 ])
 
 AC_SUBST([GLIB_REQUIRED])
+NAUTILUS_EXTENSION_DIR=`$PKG_CONFIG --variable=extensiondir libnautilus-extension`
+AC_SUBST(NAUTILUS_EXTENSION_DIR)
 
 LT_INIT([dlopen])
 

@@ -65,7 +65,7 @@ namespace Valhalla.Modules {
             FileInfo? info;
             while ((info = children.next_file()) != null) {
                 var module_name = info.get_name().split(".")[0];
-                if (module_name in loaded_names)
+                if (module_name in loaded_names || module_name == "libgd")
                     continue;
                 var module = Module.open(
                     Path.build_filename(path, info.get_name()), ModuleFlags.BIND_LAZY);
