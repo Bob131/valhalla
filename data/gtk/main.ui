@@ -141,6 +141,17 @@
                 </child>
               </object>
             </child>
+            <child>
+              <object class="GtkRevealer" id="delete_progress_reveal">
+                <property name="transition-type">slide-right</property>
+                <property name="reveal-child">false</property>
+                <child>
+                  <object class="GtkSpinner">
+                    <property name="active">true</property>
+                  </object>
+                </child>
+              </object>
+            </child>
             <child type="title">
               <object class="GtkLabel" id="selection_indicator">
                 <property name="label">0 files selected</property>

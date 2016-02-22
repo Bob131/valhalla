@@ -51,33 +51,25 @@ class MountMan : Object {
         }
     }
 
-    private struct SourceFuncWrapper {
-        SourceFunc callback;
-    }
-
     private int mounts = 0;
+    // this has to be set to true before touching counters and should
+    // only be set to true via wait_on_mount
     private bool mount_in_progress = false;
-    // an AsyncQueue is not necessary, just has a nicer API
-    private AsyncQueue<SourceFuncWrapper?> queued_callbacks = new AsyncQueue<SourceFuncWrapper?>();
 
-    private void clear_queue() {
-        SourceFuncWrapper? mount_callback;
-        while ((mount_callback = queued_callbacks.try_pop()) != null)
-            Idle.add(mount_callback.callback);
+    private async void wait_on_mount() {
+        while (mount_in_progress) {
+            Idle.add(wait_on_mount.callback);
+            yield;
+        }
+        mount_in_progress = true;
     }
 
     private async void destroy_mount(string umount_cmd, string path) {
-        mount_in_progress = true;
+        yield wait_on_mount();
         if (AtomicInt.dec_and_test(ref mounts)) // we're the last out, unmount
-            try {
-                yield new Subprocess.newv({"/bin/sh", "-c", @"sleep 1 && $(umount_cmd)"},
-                    SubprocessFlags.INHERIT_FDS).wait_check_async();
-                DirUtils.remove(path);
-            } catch (GLib.Error e) {
-                ;
-            }
+            yield new Subprocess.newv({"/bin/sh", "-c", @"sleep 1 && $(umount_cmd)"},
+                SubprocessFlags.INHERIT_FDS).wait_check_async();
         mount_in_progress = false;
-        clear_queue();
     }
 
     public async MountData create(Config.Settings settings) throws Valhalla.Error {
@@ -87,13 +79,9 @@ class MountMan : Object {
         var umount_cmd = "fusermount -u %s".printf(Shell.quote(path));
         var mount_cmd = settings["mount-command"].replace("$f", Shell.quote(path));
 
-        if (mount_in_progress) {
-            queued_callbacks.push(SourceFuncWrapper() {callback = create.callback});
-            yield;
-        }
+        yield wait_on_mount();
         AtomicInt.add(ref mounts, 1);
         if (AtomicInt.get(ref mounts) == 1) { // we're the first in, mount
-            mount_in_progress = true;
             string mounts;
             try {
                 FileUtils.get_contents("/proc/mounts", out mounts);
@@ -114,9 +102,8 @@ class MountMan : Object {
                     stderr_data += (string) buffer[0:read];
                 throw new Valhalla.Error.MODULE_ERROR(stderr_data);
             }
-            mount_in_progress = false;
-            clear_queue();
         }
+        mount_in_progress = false;
 
         var mount = Object.new(typeof(Mount), path: path, umount_cmd: umount_cmd) as Mount;
         mount.parent = this;
