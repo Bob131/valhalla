@@ -757,11 +757,47 @@ namespace Valhalla.Widgets {
                 var dialog = new Gtk.Dialog.with_buttons("New screenshot", this,
                     Gtk.DialogFlags.USE_HEADER_BAR, "_Cancel", Gtk.ResponseType.CANCEL,
                     "_Upload", Gtk.ResponseType.OK);
+
+                var headerbar = dialog.get_header_bar() as Gtk.HeaderBar;
+                var sep = new Gtk.Separator(Gtk.Orientation.VERTICAL);
+                headerbar.add(sep);
+                headerbar.child_set_property(sep, "pack-type", Gtk.PackType.END);
+                var save_button = new Gtk.Button.from_icon_name("document-save-as-symbolic");
+                save_button.clicked.connect(() => {
+                    var fchooser = new Gtk.FileChooserDialog(null, this,
+                        Gtk.FileChooserAction.SAVE, "_Cancel", Gtk.ResponseType.CANCEL,
+                        "_Save", Gtk.ResponseType.ACCEPT);
+                    var filter = new Gtk.FileFilter();
+                    filter.add_pixbuf_formats();
+                    fchooser.filter = filter;
+                    fchooser.set_current_name(@"Screenshot from $(Time.local(time_t()).to_string()).png");
+                    var response = fchooser.run();
+                    fchooser.close();
+                    if (response == Gtk.ResponseType.ACCEPT) {
+                        var path = fchooser.get_file().get_path();
+                        FileUtils.unlink(path);
+                        var format = "png";
+                        var extension = path.reverse().split(".")[0].reverse();
+                        var formats = Gdk.Pixbuf.get_formats();
+                        foreach (var pformat in formats)
+                            if (extension in pformat.get_extensions()) {
+                                format = pformat.get_name();
+                                break;
+                            }
+                        screenshot.save(path, format);
+                        dialog.response(Gtk.ResponseType.CANCEL);
+                    }
+                });
+                headerbar.add(save_button);
+                headerbar.child_set_property(save_button, "pack-type", Gtk.PackType.END);
+                headerbar.show_all();
+
                 var inner = dialog.get_content_area();
                 inner.border_width = 0;
                 inner.add(new Gtk.Image.from_pixbuf(
                     Screenshot.scale_for_preview(screenshot, this.get_screen())));
                 inner.show_all();
+
                 var response = dialog.run();
                 dialog.close();
                 if (response == Gtk.ResponseType.OK) {
