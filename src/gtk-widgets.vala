@@ -787,6 +787,7 @@ namespace Valhalla.Widgets {
                         screenshot.save(path, format);
                         dialog.response(Gtk.ResponseType.CANCEL);
                     }
+                    fchooser.destroy();
                 });
                 headerbar.add(save_button);
                 headerbar.child_set_property(save_button, "pack-type", Gtk.PackType.END);

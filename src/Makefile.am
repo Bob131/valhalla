@@ -94,4 +94,5 @@ libnautilus_valhalla_la_LDFLAGS = -module -avoid-version
 libnautilus_valhalla_la_LIBADD = $(valhalla_U_LIBS)
 
 nautilus-extension.c:
+	$(VALAC) $(libnautilus_valhalla_la_VALAFLAGS) -C nautilus-extension.vala
 	$(SED) -i "s/(GType\*\* types/(const GType\*\* types/" nautilus-extension.c

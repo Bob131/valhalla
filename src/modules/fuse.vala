@@ -183,6 +183,6 @@ public class Fuse : Object, Modules.BaseModule {
     }
 }
 
-public Type register_module() {
-    return typeof(Fuse);
+public Type[] register_module() {
+    return {typeof(Fuse)};
 }

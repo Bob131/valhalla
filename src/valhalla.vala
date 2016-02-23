@@ -13,12 +13,16 @@ class DBusHooks : Object {
 // TODO:
 // * make Modules and Config less garbage
 // * module index functionality
-// * ShareX JSON parser module
 // * about dialog
 // * move all non-UI-specific code into separate lib for alternate UIs
-class valhalla : Gtk.Application {
+class valhalla : VApplication, Gtk.Application {
     public Widgets.MainWindow window;
     public Database.Database database;
+
+    private string[] _args;
+    public string[] args {get {
+        return _args;
+    }}
 
     protected override void open(File[] files, string _) {
         activate();
@@ -55,13 +59,17 @@ class valhalla : Gtk.Application {
         base.dbus_unregister(connection, object_path);
     }
 
-    public valhalla() {
+    public new int run() {
+        return base.run(this.args);
+    }
+
+    public valhalla(string[] args) {
         Object(application_id: "so.bob131.valhalla",
             flags: ApplicationFlags.HANDLES_OPEN);
+        _args = args;
     }
 
     public static int main(string[] args) {
-        Modules.set_arg0(args[0]);
-        return new valhalla().run(args);
+        return new valhalla(args).run();
     }
 }

@@ -17,6 +17,20 @@ namespace Valhalla.Database {
         }}
 
         public signal void remove_from_database();
+
+        public RemoteFile.build_from_statement(Sqlite.Statement stmt) {
+            Object();
+            for (var i = 0; i < stmt.column_count(); i++) {
+                var col = stmt.column_name(i);
+                var val = stmt.column_text(i);
+                if (val == null)
+                    continue;
+                if (col == "timestamp")
+                    this.timestamp = Time.gm((time_t) uint64.parse(val));
+                else
+                    this[col] = val;
+            }
+        }
     }
 
     public class Database : Object {
@@ -36,41 +50,18 @@ namespace Valhalla.Database {
             assert (stmt.step() == Sqlite.DONE);
         }
 
-        private RemoteFile? build_file(Sqlite.Statement stmt) {
-            RemoteFile? result = null;
-            for (var i = 0; i < stmt.column_count(); i++) {
-                var col = stmt.column_name(i);
-                var val = stmt.column_text(i);
-                if (val == null)
-                    continue;
-                if (result == null)
-                    result = new RemoteFile();
-                if (col == "timestamp")
-                    result.timestamp = Time.gm((time_t) uint64.parse(val));
-                else
-                    result[col] = val;
-            }
-            if (result != null)
-                result.remove_from_database.connect(() => {
-                    delete_file(result);
-                });
-            return result;
-        }
-
         public bool unique_url(string url) {
             Sqlite.Statement stmt;
             db.prepare_v2("SELECT * FROM Files WHERE remote_path = $remote_path", -1, out stmt);
             stmt.bind_text(stmt.bind_parameter_index("$remote_path"), url);
-            stmt.step();
-            return build_file(stmt) == null;
+            return stmt.step() == Sqlite.DONE;
         }
 
         public bool unique_hash(string crc32) {
             Sqlite.Statement stmt;
             db.prepare_v2("SELECT * FROM Files WHERE crc32 = $crc32", -1, out stmt);
             stmt.bind_text(stmt.bind_parameter_index("$crc32"), crc32);
-            stmt.step();
-            return build_file(stmt) == null;
+            return stmt.step() == Sqlite.DONE;
         }
 
         public RemoteFile[] get_files() {
@@ -78,10 +69,10 @@ namespace Valhalla.Database {
             Sqlite.Statement stmt;
             db.prepare_v2("SELECT * FROM Files", -1, out stmt);
             while (stmt.step() == Sqlite.ROW) {
-                var file = build_file(stmt);
-                if (file != null)
-                    files.prepend_val(file); // prepend so that they're sorted by
-                                             // ascending age
+                var file = new RemoteFile.build_from_statement(stmt);
+                file.remove_from_database.connect(() => {delete_file(file);});
+                files.prepend_val(file); // prepend so that they're sorted by
+                                         // ascending age
             }
             return files.data;
         }
