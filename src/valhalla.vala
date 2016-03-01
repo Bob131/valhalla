@@ -16,8 +16,8 @@ class DBusHooks : Object {
 // * about dialog
 // * move all non-UI-specific code into separate lib for alternate UIs
 class valhalla : VApplication, Gtk.Application {
-    public Widgets.MainWindow window;
-    public Database.Database database;
+    public Widgets.MainWindow window {private set; get;}
+    public Database.Database database {private set; get;}
 
     private string[] _args;
     public string[] args {get {
@@ -46,8 +46,10 @@ class valhalla : VApplication, Gtk.Application {
 
         var hooks = new DBusHooks();
         hooks.capture_screenshot_signal.connect(() => {
-            activate();
-            window.one_shot = true;
+            if (window == null) {
+                activate();
+                window.one_shot = true;
+            }
             window.capture_screenshot.begin();
         });
 

@@ -188,9 +188,16 @@ namespace Valhalla.Screenshot {
             Gdk.EventMask.BUTTON_RELEASE_MASK, cursor, Gdk.CURRENT_TIME);
         assert (res == Gdk.GrabStatus.SUCCESS);
 
-        res = keyboard.grab(selection_window.get_window(), Gdk.GrabOwnership.NONE,
-            false, Gdk.EventMask.KEY_PRESS_MASK | Gdk.EventMask.KEY_RELEASE_MASK,
-            null, Gdk.CURRENT_TIME);
+        // sometimes when DBus activated the keyboard may be grabbed for a short amount
+        // of time, so set up timeout and loop until we have it or we time out
+        var start = (int) time_t();
+        while (true) {
+            res = keyboard.grab(selection_window.get_window(), Gdk.GrabOwnership.NONE,
+                false, Gdk.EventMask.KEY_PRESS_MASK | Gdk.EventMask.KEY_RELEASE_MASK,
+                null, Gdk.CURRENT_TIME);
+            if (res == Gdk.GrabStatus.SUCCESS || (int) time_t() - start > 1)
+                break;
+        }
         assert (res == Gdk.GrabStatus.SUCCESS);
 
         async_callback = take_interactive.callback;
