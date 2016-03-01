@@ -64,10 +64,29 @@ namespace Valhalla.Database {
             return stmt.step() == Sqlite.DONE;
         }
 
-        public RemoteFile[] get_files() {
+        public RemoteFile[] get_files(bool args = false, ...) {
             var files = new Array<RemoteFile>();
             Sqlite.Statement stmt;
-            db.prepare_v2("SELECT * FROM Files", -1, out stmt);
+            var sql = "SELECT * FROM Files";
+            var col_args = new Gee.HashMap<string, string>();
+            var va = va_list();
+            while (args) {
+                string? column = va.arg();
+                if (column == null)
+                    break;
+                assert (!(@" $column " in sql));
+                if ("WHERE" in sql)
+                    sql += " AND ";
+                else
+                    sql += " WHERE ";
+                sql += "%s = $%s".printf(column, column);
+                col_args[column] = va.arg();
+            }
+            db.prepare_v2(sql, -1, out stmt);
+            col_args.foreach((entry) => {
+                stmt.bind_text(stmt.bind_parameter_index("$"+entry.key), entry.value);
+                return true;
+            });
             while (stmt.step() == Sqlite.ROW) {
                 var file = new RemoteFile.build_from_statement(stmt);
                 file.remove_from_database.connect(() => {delete_file(file);});

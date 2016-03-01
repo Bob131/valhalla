@@ -119,29 +119,31 @@ namespace Valhalla.Widgets {
 
         public signal void failed();
 
+        private Gtk.ResponseType file_exists(string message) {
+            var dialog = new Gtk.MessageDialog((Application.get_default() as valhalla).window,
+                Gtk.DialogFlags.MODAL, Gtk.MessageType.QUESTION, Gtk.ButtonsType.NONE,
+                "%s", message); // avoid failing when compiled with -Wformat-security
+            dialog.add_button("Cancel", Gtk.ResponseType.CANCEL);
+            dialog.add_button("Display Existing File", Gtk.ResponseType.NO);
+            dialog.add_button("Overwrite", Gtk.ResponseType.YES);
+            var ret = dialog.run();
+            dialog.destroy();
+            if (ret == Gtk.ResponseType.NO) {
+                var files = db.get_files(true, crc32: crc32);
+                if (files.length == 0)
+                    files = db.get_files(true, remote_path: _remote_path);
+                (Application.get_default() as valhalla).window.file_window.display_file(files[0]);
+            }
+            return (Gtk.ResponseType) ret;
+        }
+
         public void set_remote_path(string path) throws Valhalla.Error {
             if (Uri.parse_scheme(path) == null)
                 throw new Valhalla.Error.INVALID_REMOTE_PATH(@"URL $(path) is invalid");
-            if (!db.unique_hash(crc32)) {
-                var msg = new Gtk.MessageDialog((Application.get_default() as valhalla).window,
-                    Gtk.DialogFlags.MODAL, Gtk.MessageType.QUESTION, Gtk.ButtonsType.YES_NO,
-                    "A file with hash %s appears to have already been uploaded. Continue, potentially overwriting the existing file?",
-                    crc32);
-                var result = msg.run();
-                msg.destroy();
-                if (result != Gtk.ResponseType.YES)
-                    throw new Valhalla.Error.CANCELLED("");
-            } else if (!db.unique_url(path)) {
-                var msg = new Gtk.MessageDialog((Application.get_default() as valhalla).window,
-                    Gtk.DialogFlags.MODAL, Gtk.MessageType.QUESTION, Gtk.ButtonsType.YES_NO,
-                    "A file with the URL %s already exists. Continue and overwrite the existing file?",
-                    path);
-                var result = msg.run();
-                msg.destroy();
-                if (result != Gtk.ResponseType.YES)
-                    throw new Valhalla.Error.CANCELLED("");
-            }
             _remote_path = path;
+            if (!db.unique_url(path))
+                if (file_exists(@"A file with the URL $path already exists") != Gtk.ResponseType.YES)
+                    throw new Valhalla.Error.CANCELLED("");
 
             // generate thumbnail now
             var dummy = new Database.RemoteFile();
@@ -195,6 +197,7 @@ namespace Valhalla.Widgets {
                     cancel_button.sensitive = true;
                 return pulse;
             });
+
             this.progress.connect((bytes) => {
                 pulse = false;
                 if (this.cancellable.is_cancelled())
@@ -223,6 +226,10 @@ namespace Valhalla.Widgets {
                 new Notify.Notification("Upload complete",
                     remote_path, "document-send-symbolic").show();
             });
+
+            if (!db.unique_hash(crc32))
+                if (file_exists(@"A file with hash $crc32 appears to have already been uploaded") != Gtk.ResponseType.YES)
+                    cancellable.cancel();
 
             this.show_all();
         }
@@ -573,7 +580,8 @@ namespace Valhalla.Widgets {
     }
 
     class FileWindow : Gtk.Stack {
-        public Database.Database db {construct; private get;}
+        private valhalla app;
+        private Database.Database db;
         private bool select = false;
 
         public virtual signal void toggle_selection_mode(bool select) {
@@ -585,12 +593,23 @@ namespace Valhalla.Widgets {
             (this.visible_child as DisplayFile).start_destroy();
         }
 
-        public FileWindow() {
-            var app = Application.get_default() as valhalla;
-            Object(db: app.database);
+        public void display_file(Database.RemoteFile file) {
+            var displayfile = new DisplayFile(file);
+            displayfile.start_destroy.connect(() => {
+                this.set_visible_child_full("files", Gtk.StackTransitionType.SLIDE_RIGHT);
+                Timeout.add(this.get_transition_duration(), () => {
+                    displayfile.destroy();
+                    return false;
+                });
+            });
+            this.add_named(displayfile, "filedisplay");
+            this.set_visible_child_full("filedisplay", Gtk.StackTransitionType.SLIDE_LEFT);
+            app.window.main_window_stack.visible_child = this;
         }
 
         construct {
+            app = Application.get_default() as valhalla;
+            db = app.database;
             var files = new Files();
             toggle_selection_mode.connect((b) => {
                 files.toggle_select_mode(b);
@@ -600,16 +619,7 @@ namespace Valhalla.Widgets {
                     return;
                 var file = (row as ListFile).file;
                 var pot_module = Modules.get_module(file.module_name);
-                var displayfile = new DisplayFile(file);
-                displayfile.start_destroy.connect(() => {
-                    this.set_visible_child_full("files", Gtk.StackTransitionType.SLIDE_RIGHT);
-                    Timeout.add(this.get_transition_duration(), () => {
-                        displayfile.destroy();
-                        return false;
-                    });
-                });
-                this.add_named(displayfile, "filedisplay");
-                this.set_visible_child_full("filedisplay", Gtk.StackTransitionType.SLIDE_LEFT);
+                display_file(file);
             });
             var list_window = new Gtk.ScrolledWindow(null, null);
             list_window.hscrollbar_policy = Gtk.PolicyType.NEVER;
@@ -623,7 +633,7 @@ namespace Valhalla.Widgets {
     [GtkTemplate (ui = "/so/bob131/valhalla/gtk/main.ui")]
     class MainWindow : Gtk.ApplicationWindow {
         [GtkChild]
-        private FileWindow file_window;
+        public FileWindow file_window;
         [GtkChild]
         private Transfers transfers;
         [GtkChild]
@@ -639,7 +649,7 @@ namespace Valhalla.Widgets {
         [GtkChild]
         private Gtk.Overlay stack_overlay;
         [GtkChild]
-        private Gtk.Stack main_window_stack;
+        public Gtk.Stack main_window_stack;
         [GtkChild]
         public Gtk.Revealer back_reveal;
         [GtkChild]
@@ -700,6 +710,8 @@ namespace Valhalla.Widgets {
             Idle.add(kickoff_upload.callback);
             yield;
             var transfer = new TransferWidget.from_path(path);
+            if (transfer.cancellable.is_cancelled())
+                return;
             var module = Modules.get_active_module();
             if (module == null) {
                 display_error("Please configure a module in the preferences panel");
@@ -886,7 +898,7 @@ namespace Valhalla.Widgets {
                 });
             file_window.bind_property("visible-child", select_reveal, "reveal-child",
                 BindingFlags.DEFAULT, (binding, src, ref target) => {
-                    if (src.get_object() is FileWindow)
+                    if (src.get_object() is Gtk.ScrolledWindow)
                         target = true;
                     else
                         target = false;
