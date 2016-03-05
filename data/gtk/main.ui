@@ -78,39 +78,18 @@
               </object>
             </child>
             <child>
-              <object class="GtkRevealer" id="select_reveal">
-                <property name="transition-type">slide-left</property>
+              <object class="GtkRevealer" id="context_revealer">
+                <property name="transition-type">slide-right</property>
                 <property name="reveal-child">true</property>
                 <child>
-                  <object class="GtkToggleButton" id="select_button">
-                    <signal name="toggled" handler="select_toggle_on"/>
+                  <object class="GtkToggleButton">
+                    <signal name="toggled" handler="context_toggle"/>
                     <style>
                       <class name="image-button"/>
                     </style>
                     <child>
                       <object class="GtkImage">
                         <property name="icon-name">object-select-symbolic</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-              </object>
-              <packing>
-                <property name="pack-type">end</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkRevealer" id="transfers_clear_reveal">
-                <property name="transition-type">slide-left</property>
-                <property name="reveal-child">false</property>
-                <child>
-                  <object class="GtkButton" id="transfers_clear_button">
-                    <style>
-                      <class name="image-button"/>
-                    </style>
-                    <child>
-                      <object class="GtkImage">
-                        <property name="icon-name">edit-clear-all-symbolic</property>
                       </object>
                     </child>
                   </object>

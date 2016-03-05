@@ -409,7 +409,9 @@ namespace Valhalla.Widgets {
                     if (ev.button == 1)
                         this.activate();
                     else if (ev.button == 3 && this.selectable) {
-                        (Application.get_default() as valhalla).window.select_button.active = true;
+                        var app = Application.get_default() as valhalla;
+                        var context_button = app.window.context_revealer.get_child() as Gtk.ToggleButton;
+                        context_button.active = true;
                         select_me_pls();
                     }
                 } else {
@@ -653,17 +655,11 @@ namespace Valhalla.Widgets {
         [GtkChild]
         public Gtk.Revealer back_reveal;
         [GtkChild]
-        public Gtk.Revealer select_reveal;
-        [GtkChild]
-        public Gtk.ToggleButton select_button;
-        [GtkChild]
         public Gtk.Revealer delete_progress_reveal;
         [GtkChild]
         public Gtk.ToggleButton deselect_button;
         [GtkChild]
-        private Gtk.Revealer transfers_clear_reveal;
-        [GtkChild]
-        private Gtk.Button transfers_clear_button;
+        public Gtk.Revealer context_revealer;
         [GtkChild]
         public Gtk.Button delete_button;
         [GtkChild]
@@ -827,7 +823,6 @@ namespace Valhalla.Widgets {
             this.visible = true;
         }
 
-        [GtkCallback]
         private void select_toggle_on(Gtk.ToggleButton button) {
             if (!button.active)
                 return;
@@ -851,12 +846,17 @@ namespace Valhalla.Widgets {
             });
         }
 
+        [GtkCallback]
+        private void context_toggle(Gtk.ToggleButton button) {
+            if (this.main_window_stack.visible_child is Transfers && button.active) {
+                transfers.clear();
+                button.active = false;
+            } else if (this.main_window_stack.visible_child is FileWindow)
+                select_toggle_on(button);
+        }
+
         construct {
             Notify.init("Valhalla");
-
-            transfers_clear_button.clicked.connect((_) => {
-                transfers.clear();
-            });
 
             main_window_stack.notify["visible-child"].connect((_) => {
                 main_window_stack.child_set(main_window_stack.visible_child,
@@ -865,43 +865,32 @@ namespace Valhalla.Widgets {
 
             main_window_stack.bind_property("visible-child", back_reveal, "reveal-child",
                 BindingFlags.DEFAULT, (binding, src, ref target) => {
-                    if (src.get_object() is FileWindow && file_window.visible_child is DisplayFile)
-                        target = true;
-                    else
-                        target = false;
+                    target = src.get_object() is FileWindow && file_window.visible_child is DisplayFile;
                     return true;
                 });
-            main_window_stack.bind_property("visible-child", select_reveal, "reveal-child",
+            main_window_stack.bind_property("visible-child", context_revealer, "reveal-child",
                 BindingFlags.DEFAULT, (binding, src, ref target) => {
-                    if (src.get_object() is FileWindow && file_window.visible_child is Gtk.ScrolledWindow)
+                    var context_button = context_revealer.get_child() as Gtk.ToggleButton;
+                    var button_image = context_button.get_child() as Gtk.Image;
+                    if (src.get_object() is FileWindow && file_window.visible_child is Gtk.ScrolledWindow) {
+                        button_image.icon_name = "object-select-symbolic";
                         target = true;
-                    else
-                        target = false;
-                    return true;
-                });
-            main_window_stack.bind_property("visible-child", transfers_clear_reveal, "reveal-child",
-                BindingFlags.DEFAULT, (binding, src, ref target) => {
-                    if (src.get_object() is Transfers)
+                    } else if (src.get_object() is Transfers) {
+                        button_image.icon_name = "edit-clear-all-symbolic";
                         target = true;
-                    else
+                    } else
                         target = false;
                     return true;
                 });
 
             file_window.bind_property("visible-child", back_reveal, "reveal-child",
                 BindingFlags.DEFAULT, (binding, src, ref target) => {
-                    if (src.get_object() is DisplayFile)
-                        target = true;
-                    else
-                        target = false;
+                    target = src.get_object() is DisplayFile;
                     return true;
                 });
-            file_window.bind_property("visible-child", select_reveal, "reveal-child",
+            file_window.bind_property("visible-child", context_revealer, "reveal-child",
                 BindingFlags.DEFAULT, (binding, src, ref target) => {
-                    if (src.get_object() is Gtk.ScrolledWindow)
-                        target = true;
-                    else
-                        target = false;
+                    target = src.get_object() is Gtk.ScrolledWindow;
                     return true;
                 });
 
