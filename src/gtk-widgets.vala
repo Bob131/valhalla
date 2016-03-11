@@ -129,9 +129,9 @@ namespace Valhalla.Widgets {
             var ret = dialog.run();
             dialog.destroy();
             if (ret == Gtk.ResponseType.NO) {
-                var files = db.get_files(true, crc32: crc32);
+                var files = db.query(true, crc32: crc32);
                 if (files.length == 0)
-                    files = db.get_files(true, remote_path: _remote_path);
+                    files = db.query(true, remote_path: _remote_path);
                 (Application.get_default() as valhalla).window.file_window.display_file(files[0]);
             }
             return (Gtk.ResponseType) ret;
@@ -310,6 +310,11 @@ namespace Valhalla.Widgets {
         [GtkChild]
         private Gtk.Revealer delete_spinner_reveal;
 
+        [GtkChild]
+        private Gtk.Button prev_button;
+        [GtkChild]
+        private Gtk.Button next_button;
+
         // allow signal callbacks to fire before we've actually been destroyed
         public signal void start_destroy();
 
@@ -326,6 +331,18 @@ namespace Valhalla.Widgets {
                 info_grid.attach(val_label, 2, grid_row_counter);
             }
             grid_row_counter++;
+        }
+
+        private void change_display(Database.RemoteFile file, Gtk.StackTransitionType direction) {
+            var new_display = new DisplayFile(file);
+            var parent = this.parent as FileWindow;
+            var new_name = parent.visible_child_name + "_";
+            parent.add_named(new_display, new_name);
+            parent.set_visible_child_full(new_name, direction);
+            Timeout.add(parent.get_transition_duration(), () => {
+                this.destroy();
+                return false;
+            });
         }
 
         public DisplayFile(Database.RemoteFile file) {
@@ -390,6 +407,28 @@ namespace Valhalla.Widgets {
                     });
                 }
                 msg.destroy();
+            });
+
+            if (file.prev == null)
+                prev_button.sensitive = false;
+            else
+                prev_button.clicked.connect(() => {
+                    change_display(file.prev, Gtk.StackTransitionType.SLIDE_RIGHT);
+                });
+            if (file.next == null)
+                next_button.sensitive = false;
+            else
+                next_button.clicked.connect(() => {
+                    change_display(file.next, Gtk.StackTransitionType.SLIDE_LEFT);
+                });
+
+            this.start_destroy.connect(() => {
+                var parent = this.parent as FileWindow;
+                parent.set_visible_child_full("files", Gtk.StackTransitionType.SLIDE_RIGHT);
+                Timeout.add(parent.get_transition_duration(), () => {
+                    this.destroy();
+                    return false;
+                });
             });
 
             this.show_all();
@@ -471,7 +510,7 @@ namespace Valhalla.Widgets {
             this.foreach((row) => {
                 row.destroy();
             });
-            foreach (var file in db.get_files()) {
+            foreach (var file in db.files) {
                 var lf = new ListFile(file);
                 lf.select_me_pls.connect(() => {
                     this.select_row(lf);
@@ -545,7 +584,7 @@ namespace Valhalla.Widgets {
                         var response = msg.run();
                         msg.destroy();
                         if (response == Gtk.ResponseType.YES)
-                            delete_selected();
+                            delete_selected.begin();
                     });
                 }
                 var selected = this.get_selected_rows();
@@ -597,13 +636,6 @@ namespace Valhalla.Widgets {
 
         public void display_file(Database.RemoteFile file) {
             var displayfile = new DisplayFile(file);
-            displayfile.start_destroy.connect(() => {
-                this.set_visible_child_full("files", Gtk.StackTransitionType.SLIDE_RIGHT);
-                Timeout.add(this.get_transition_duration(), () => {
-                    displayfile.destroy();
-                    return false;
-                });
-            });
             this.add_named(displayfile, "filedisplay");
             this.set_visible_child_full("filedisplay", Gtk.StackTransitionType.SLIDE_LEFT);
             app.window.main_window_stack.visible_child = this;
@@ -620,7 +652,6 @@ namespace Valhalla.Widgets {
                 if (select)
                     return;
                 var file = (row as ListFile).file;
-                var pot_module = Modules.get_module(file.module_name);
                 display_file(file);
             });
             var list_window = new Gtk.ScrolledWindow(null, null);
@@ -855,6 +886,18 @@ namespace Valhalla.Widgets {
                 select_toggle_on(button);
         }
 
+        private bool context_button_logic(Gtk.Image button_image) {
+            var src = main_window_stack.visible_child;
+            if (src is FileWindow && file_window.visible_child is Gtk.ScrolledWindow) {
+                button_image.icon_name = "object-select-symbolic";
+                return true;
+            } else if (src is Transfers) {
+                button_image.icon_name = "edit-clear-all-symbolic";
+                return true;
+            } else
+                return false;
+        }
+
         construct {
             Notify.init("Valhalla");
 
@@ -872,14 +915,7 @@ namespace Valhalla.Widgets {
                 BindingFlags.DEFAULT, (binding, src, ref target) => {
                     var context_button = context_revealer.get_child() as Gtk.ToggleButton;
                     var button_image = context_button.get_child() as Gtk.Image;
-                    if (src.get_object() is FileWindow && file_window.visible_child is Gtk.ScrolledWindow) {
-                        button_image.icon_name = "object-select-symbolic";
-                        target = true;
-                    } else if (src.get_object() is Transfers) {
-                        button_image.icon_name = "edit-clear-all-symbolic";
-                        target = true;
-                    } else
-                        target = false;
+                    target = context_button_logic(button_image);
                     return true;
                 });
 
@@ -890,7 +926,9 @@ namespace Valhalla.Widgets {
                 });
             file_window.bind_property("visible-child", context_revealer, "reveal-child",
                 BindingFlags.DEFAULT, (binding, src, ref target) => {
-                    target = src.get_object() is Gtk.ScrolledWindow;
+                    var context_button = context_revealer.get_child() as Gtk.ToggleButton;
+                    var button_image = context_button.get_child() as Gtk.Image;
+                    target = context_button_logic(button_image);
                     return true;
                 });
 

@@ -16,10 +16,27 @@ namespace Valhalla.Database {
             return _module;
         }}
 
+        private Database db;
+        private int index;
+        public RemoteFile? prev {get {
+            var real_index = db.files.length - index - 1;
+            if (real_index == 0)
+                return null;
+            return db.files[real_index-1];
+        }}
+        public RemoteFile? next {get {
+            var real_index = db.files.length - index - 1;
+            if (real_index == db.files.length-1)
+                return null;
+            return db.files[real_index+1];
+        }}
+
         public signal void remove_from_database();
 
-        public RemoteFile.build_from_statement(Sqlite.Statement stmt) {
+        public RemoteFile.build_from_statement(Database parent, Sqlite.Statement stmt, int index) {
             Object();
+            this.db = parent;
+            this.index = index;
             for (var i = 0; i < stmt.column_count(); i++) {
                 var col = stmt.column_name(i);
                 var val = stmt.column_text(i);
@@ -34,21 +51,18 @@ namespace Valhalla.Database {
     }
 
     public class Database : Object {
+        private Array<RemoteFile>? files_cache = null;
+        public RemoteFile[] files {get{
+            if (files_cache == null)
+                query(false);
+            return files_cache.data;
+        }}
+
         private Sqlite.Database db;
 
         private string db_path {owned get {
             return Path.build_filename(Config.config_directory(), "files.db");
         }}
-
-        public signal void committed();
-
-        private void delete_file(RemoteFile file) {
-            Thumbnailer.delete_thumbnail(file);
-            Sqlite.Statement stmt;
-            db.prepare_v2("DELETE FROM Files WHERE remote_path = $remote_path", -1, out stmt);
-            stmt.bind_text(stmt.bind_parameter_index("$remote_path"), file.remote_path);
-            assert (stmt.step() == Sqlite.DONE);
-        }
 
         public bool unique_url(string url) {
             Sqlite.Statement stmt;
@@ -64,7 +78,7 @@ namespace Valhalla.Database {
             return stmt.step() == Sqlite.DONE;
         }
 
-        public RemoteFile[] get_files(bool args = false, ...) {
+        public RemoteFile[] query(bool args = false, ...) {
             var files = new Array<RemoteFile>();
             Sqlite.Statement stmt;
             var sql = "SELECT * FROM Files";
@@ -87,13 +101,25 @@ namespace Valhalla.Database {
                 stmt.bind_text(stmt.bind_parameter_index("$"+entry.key), entry.value);
                 return true;
             });
-            while (stmt.step() == Sqlite.ROW) {
-                var file = new RemoteFile.build_from_statement(stmt);
+            for (var i = 0; stmt.step() == Sqlite.ROW; i++) {
+                var file = new RemoteFile.build_from_statement(this, stmt, i);
                 file.remove_from_database.connect(() => {delete_file(file);});
                 files.prepend_val(file); // prepend so that they're sorted by
                                          // ascending age
             }
+            if (!args)
+                files_cache = files;
             return files.data;
+        }
+
+        public signal void committed();
+
+        private void delete_file(RemoteFile file) {
+            Thumbnailer.delete_thumbnail(file);
+            Sqlite.Statement stmt;
+            db.prepare_v2("DELETE FROM Files WHERE remote_path = $remote_path", -1, out stmt);
+            stmt.bind_text(stmt.bind_parameter_index("$remote_path"), file.remote_path);
+            assert (stmt.step() == Sqlite.DONE);
         }
 
         public void commit_transfer(Widgets.TransferWidget file) {
@@ -123,6 +149,7 @@ namespace Valhalla.Database {
                             remote_path STRING UNIQUE NOT NULL ON CONFLICT FAIL,
                             module_name STRING);""");
             db.commit_hook(() => {
+                files_cache = null;
                 committed();
             });
         }
