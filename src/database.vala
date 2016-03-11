@@ -1,11 +1,12 @@
 namespace Valhalla.Database {
     public class RemoteFile : Object {
-        public Time timestamp {set; get;}
-        public string crc32 {set; get;}
-        public string local_filename {set; get;}
-        public string file_type {set; get;}
+        public Time? timestamp {set; get; default=null;}
+        public string? crc32 {set; get; default=null;}
+        public string? local_filename {set; get; default=null;}
+        public string? file_type {set; get; default=null;}
+        public uint64? file_size {set; get; default=null;}
         public string remote_path {set; get;}
-        public string module_name {set; get;}
+        public string? module_name {set; get; default=null;}
 
         private Modules.BaseModule? _module;
         private bool _module_set = false;
@@ -44,6 +45,8 @@ namespace Valhalla.Database {
                     continue;
                 if (col == "timestamp")
                     this.timestamp = Time.gm((time_t) uint64.parse(val));
+                else if (col == "file_size")
+                    this.file_size = uint64.parse(val);
                 else
                     this[col] = val;
             }
@@ -126,14 +129,15 @@ namespace Valhalla.Database {
             Sqlite.Statement stmt;
             db.prepare_v2("""INSERT OR REPLACE INTO Files
                                 (timestamp, crc32, local_filename, file_type,
-                                 remote_path, module_name)
+                                 file_size, remote_path, module_name)
                              VALUES ($timestamp, $crc32, $local_filename, $file_type,
-                                     $remote_path, $module_name)""", -1, out stmt);
+                                     $file_size, $remote_path, $module_name)""", -1, out stmt);
             stmt.bind_text(stmt.bind_parameter_index("$timestamp"),
                 ((uint64) file.timestamp.mktime()).to_string());
             stmt.bind_text(stmt.bind_parameter_index("$crc32"), file.crc32);
             stmt.bind_text(stmt.bind_parameter_index("$local_filename"), file.local_filename);
             stmt.bind_text(stmt.bind_parameter_index("$file_type"), file.file_type);
+            stmt.bind_text(stmt.bind_parameter_index("$file_size"), file.file_size.to_string());
             stmt.bind_text(stmt.bind_parameter_index("$remote_path"), file.remote_path);
             stmt.bind_text(stmt.bind_parameter_index("$module_name"), file.module_name);
             assert (stmt.step() == Sqlite.DONE);
@@ -146,6 +150,7 @@ namespace Valhalla.Database {
                             crc32 STRING,
                             local_filename STRING,
                             file_type STRING,
+                            file_size STRING,
                             remote_path STRING UNIQUE NOT NULL ON CONFLICT FAIL,
                             module_name STRING);""");
             db.commit_hook(() => {

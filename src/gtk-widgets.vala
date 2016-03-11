@@ -98,6 +98,9 @@ namespace Valhalla.Widgets {
         public string file_name {protected set; get;}
         public uint8[] file_contents {protected set; get;}
         public string file_type {protected set; get;}
+        public uint64 file_size {get {
+            return file_contents.length;
+        }}
 
         public string local_filename {set; get;}
         public string remote_path {get {return _remote_path;}}
@@ -373,6 +376,8 @@ namespace Valhalla.Widgets {
             build_row("Uploaded at:", file.timestamp.to_string());
             build_row("Checksum:", file.crc32);
             build_row("File type:", file.file_type);
+            if (file.file_size != null)
+                build_row("File size:", format_size(file.file_size, FormatSizeFlags.IEC_UNITS));
 
             forget_button.clicked.connect((_) => {
                 var msg = new Gtk.MessageDialog((Application.get_default() as valhalla).window,
