@@ -41,7 +41,9 @@ class valhalla : VApplication, Gtk.Application {
             window.present();
     }
 
-    protected override bool dbus_register(DBusConnection connection, string object_path) throws GLib.Error {
+    protected override bool dbus_register(DBusConnection connection,
+                                          string object_path)
+                                         throws GLib.Error {
         base.dbus_register(connection, object_path);
 
         var hooks = new DBusHooks();
@@ -57,7 +59,8 @@ class valhalla : VApplication, Gtk.Application {
         return true;
     }
 
-    protected override void dbus_unregister(DBusConnection connection, string object_path) {
+    protected override void dbus_unregister(DBusConnection connection,
+                                            string object_path) {
         base.dbus_unregister(connection, object_path);
     }
 

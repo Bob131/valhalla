@@ -1,4 +1,9 @@
 namespace Valhalla.Widgets {
+    Window get_main_window() {
+        return (Application.get_default() as valhalla).window;
+    }
+
+
     [GtkTemplate (ui = "/so/bob131/valhalla/gtk/window.ui")]
     class Window : Gtk.ApplicationWindow {
         [GtkChild]
@@ -32,11 +37,12 @@ namespace Valhalla.Widgets {
         [GtkChild]
         public Gtk.Label selection_indicator;
 
-        public bool one_shot = false; // this is true if we've just been launched
-                                      // for the purpose of capturing a screenshot.
-                                      // If the user cancels a capture when this
-                                      // is true, we want to outright exit instead
-                                      // of (re)displaying `this`
+        public bool one_shot = false; // this is true if we've just been
+                                      // launched for the purpose of capturing a
+                                      // screenshot. If the user cancels a
+                                      // capture when this is true, we want to
+                                      // outright exit instead of (re)displaying
+                                      // `this`
 
         public void display_error(string text) {
             error_text.label = text.strip();

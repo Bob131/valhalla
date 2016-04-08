@@ -33,9 +33,11 @@ namespace Valhalla.Widgets {
         public signal void failed();
 
         private Gtk.ResponseType file_exists(string message) {
-            var dialog = new Gtk.MessageDialog((Application.get_default() as valhalla).window,
-                Gtk.DialogFlags.MODAL, Gtk.MessageType.QUESTION, Gtk.ButtonsType.NONE,
-                "%s", message); // avoid failing when compiled with -Wformat-security
+            var dialog = new Gtk.MessageDialog(get_main_window(),
+                Gtk.DialogFlags.MODAL, Gtk.MessageType.QUESTION,
+                Gtk.ButtonsType.NONE, "%s", message); // avoid failing when
+                                                      // compiled with
+                                                      // -Wformat-security
             dialog.add_button("Cancel", Gtk.ResponseType.CANCEL);
             dialog.add_button("Display Existing File", Gtk.ResponseType.NO);
             dialog.add_button("Overwrite", Gtk.ResponseType.YES);
@@ -45,17 +47,19 @@ namespace Valhalla.Widgets {
                 var files = db.query(true, crc32: crc32);
                 if (files.length == 0)
                     files = db.query(true, remote_path: _remote_path);
-                (Application.get_default() as valhalla).window.file_window.display_file(files[0]);
+                get_main_window().file_window.display_file(files[0]);
             }
             return (Gtk.ResponseType) ret;
         }
 
         public void set_remote_path(string path) throws Valhalla.Error {
             if (Uri.parse_scheme(path) == null)
-                throw new Valhalla.Error.INVALID_REMOTE_PATH(@"URL $(path) is invalid");
+                throw new Valhalla.Error.INVALID_REMOTE_PATH(
+                    @"URL $(path) is invalid");
             _remote_path = path;
             if (!db.unique_url(path))
-                if (file_exists(@"A file with the URL $path already exists") != Gtk.ResponseType.YES)
+                if (file_exists(@"A file with the URL $path already exists")
+                        != Gtk.ResponseType.YES)
                     throw new Valhalla.Error.CANCELLED("");
 
             // generate thumbnail now
@@ -72,7 +76,7 @@ namespace Valhalla.Widgets {
         public TransferWidget.from_path(owned string path) {
             Object();
 
-            this.db = (Application.get_default() as valhalla).database;
+            db = (Application.get_default() as valhalla).database;
             this.completed.connect(() => {
                 db.commit_transfer(this);
             });
@@ -81,7 +85,8 @@ namespace Valhalla.Widgets {
                 path = path[7:path.length];
 
             this.init_for_path(path);
-            crc32 = "%08x".printf((uint) ZLib.Utility.adler32(1, file_contents));
+            crc32 = "%08x".printf(
+                (uint) ZLib.Utility.adler32(1, file_contents));
             local_filename = path;
             module_name = Config.settings["module"];
 
@@ -91,12 +96,14 @@ namespace Valhalla.Widgets {
             progress_bar.pulse();
 
             copy_button.clicked.connect(() => {
-                var clipboard = Gtk.Clipboard.get_default(Gdk.Display.get_default());
+                var clipboard = Gtk.Clipboard.get_default(
+                    Gdk.Display.get_default());
                 clipboard.set_text(remote_path, remote_path.length);
-                (Application.get_default() as valhalla).window.stack_notify("URL copied to clipboard");
+                get_main_window().stack_notify("URL copied to clipboard");
             });
             cancel_button.clicked.connect(() => {
-                if (status == "Upload failed" || status == "Cancelled" || status == "Done!")
+                if (status == "Upload failed" || status == "Cancelled" ||
+                        status == "Done!")
                     this.destroy();
                 else
                     this.cancellable.cancel();
@@ -124,7 +131,8 @@ namespace Valhalla.Widgets {
                 status = "Upload failed";
                 progress_bar.fraction = 0;
                 new Notify.Notification("Upload failed",
-                    Path.get_basename(local_filename), "document-send-symbolic").show();
+                    Path.get_basename(local_filename),
+                    "document-send-symbolic").show();
             });
             this.cancellable.connect((_) => {
                 pulse = false;
@@ -167,9 +175,11 @@ namespace Valhalla.Widgets {
 
         public void clear() {
             listbox.foreach((row) => {
-                var transfer = (row as Gtk.ListBoxRow).get_child() as TransferWidget;
-                if (transfer.status == "Done!" || transfer.status == "Upload failed"
-                        || transfer.status == "Cancelled")
+                var transfer = (row as Gtk.ListBoxRow).get_child()
+                    as TransferWidget;
+                if (transfer.status == "Done!" ||
+                        transfer.status == "Upload failed" ||
+                        transfer.status == "Cancelled")
                     transfer.destroy();
             });
         }
@@ -185,8 +195,8 @@ namespace Valhalla.Widgets {
             listbox.activate_on_single_click = true;
 
             var placeholder = new Gtk.Box(Gtk.Orientation.VERTICAL, 6);
-            placeholder.add(new Gtk.Image.from_icon_name("network-idle-symbolic",
-                Gtk.IconSize.DIALOG));
+            placeholder.add(new Gtk.Image.from_icon_name(
+                "network-idle-symbolic", Gtk.IconSize.DIALOG));
             placeholder.add(new Gtk.Label("No transfers pending"));
             placeholder.halign = Gtk.Align.CENTER;
             placeholder.valign = Gtk.Align.CENTER;

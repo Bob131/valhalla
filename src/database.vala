@@ -34,7 +34,9 @@ namespace Valhalla.Database {
 
         public signal void remove_from_database();
 
-        public RemoteFile.build_from_statement(Database parent, Sqlite.Statement stmt, int index) {
+        public RemoteFile.build_from_statement(Database parent,
+                                               Sqlite.Statement stmt,
+                                               int index) {
             Object();
             this.db = parent;
             this.index = index;
@@ -69,14 +71,16 @@ namespace Valhalla.Database {
 
         public bool unique_url(string url) {
             Sqlite.Statement stmt;
-            db.prepare_v2("SELECT * FROM Files WHERE remote_path = $remote_path", -1, out stmt);
+            db.prepare_v2("SELECT * FROM Files WHERE remote_path = $remote_path"
+                , -1, out stmt);
             stmt.bind_text(stmt.bind_parameter_index("$remote_path"), url);
             return stmt.step() == Sqlite.DONE;
         }
 
         public bool unique_hash(string crc32) {
             Sqlite.Statement stmt;
-            db.prepare_v2("SELECT * FROM Files WHERE crc32 = $crc32", -1, out stmt);
+            db.prepare_v2("SELECT * FROM Files WHERE crc32 = $crc32", -1,
+                out stmt);
             stmt.bind_text(stmt.bind_parameter_index("$crc32"), crc32);
             return stmt.step() == Sqlite.DONE;
         }
@@ -101,7 +105,8 @@ namespace Valhalla.Database {
             }
             db.prepare_v2(sql, -1, out stmt);
             col_args.foreach((entry) => {
-                stmt.bind_text(stmt.bind_parameter_index("$"+entry.key), entry.value);
+                stmt.bind_text(stmt.bind_parameter_index("$"+entry.key),
+                    entry.value);
                 return true;
             });
             for (var i = 0; stmt.step() == Sqlite.ROW; i++) {
@@ -120,8 +125,10 @@ namespace Valhalla.Database {
         private void delete_file(RemoteFile file) {
             Thumbnailer.delete_thumbnail(file);
             Sqlite.Statement stmt;
-            db.prepare_v2("DELETE FROM Files WHERE remote_path = $remote_path", -1, out stmt);
-            stmt.bind_text(stmt.bind_parameter_index("$remote_path"), file.remote_path);
+            db.prepare_v2("DELETE FROM Files WHERE remote_path = $remote_path",
+                -1, out stmt);
+            stmt.bind_text(stmt.bind_parameter_index("$remote_path"),
+                file.remote_path);
             assert (stmt.step() == Sqlite.DONE);
         }
 
@@ -130,16 +137,22 @@ namespace Valhalla.Database {
             db.prepare_v2("""INSERT OR REPLACE INTO Files
                                 (timestamp, crc32, local_filename, file_type,
                                  file_size, remote_path, module_name)
-                             VALUES ($timestamp, $crc32, $local_filename, $file_type,
-                                     $file_size, $remote_path, $module_name)""", -1, out stmt);
+                             VALUES ($timestamp, $crc32, $local_filename,
+                                     $file_type, $file_size, $remote_path,
+                                     $module_name)""", -1, out stmt);
             stmt.bind_text(stmt.bind_parameter_index("$timestamp"),
                 ((uint64) file.timestamp.mktime()).to_string());
             stmt.bind_text(stmt.bind_parameter_index("$crc32"), file.crc32);
-            stmt.bind_text(stmt.bind_parameter_index("$local_filename"), file.local_filename);
-            stmt.bind_text(stmt.bind_parameter_index("$file_type"), file.file_type);
-            stmt.bind_text(stmt.bind_parameter_index("$file_size"), file.file_size.to_string());
-            stmt.bind_text(stmt.bind_parameter_index("$remote_path"), file.remote_path);
-            stmt.bind_text(stmt.bind_parameter_index("$module_name"), file.module_name);
+            stmt.bind_text(stmt.bind_parameter_index("$local_filename"),
+                file.local_filename);
+            stmt.bind_text(stmt.bind_parameter_index("$file_type"),
+                file.file_type);
+            stmt.bind_text(stmt.bind_parameter_index("$file_size"),
+                file.file_size.to_string());
+            stmt.bind_text(stmt.bind_parameter_index("$remote_path"),
+                file.remote_path);
+            stmt.bind_text(stmt.bind_parameter_index("$module_name"),
+                file.module_name);
             assert (stmt.step() == Sqlite.DONE);
         }
 

@@ -4,8 +4,8 @@ interface DBusHooks : Object {
 }
 
 int main(string[] args) {
-    var iface = Bus.get_proxy_sync<DBusHooks>(BusType.SESSION, "so.bob131.valhalla",
-        "/so/bob131/valhalla");
+    var iface = Bus.get_proxy_sync<DBusHooks>(BusType.SESSION,
+        "so.bob131.valhalla", "/so/bob131/valhalla");
     iface.capture_screenshot();
     return 0;
 }

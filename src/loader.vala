@@ -41,7 +41,8 @@ namespace Valhalla.Modules {
                 if (module_name in loaded_names || module_name == "libgd")
                     continue;
                 var module = Module.open(
-                    Path.build_filename(path, info.get_name()), ModuleFlags.BIND_LAZY);
+                    Path.build_filename(path, info.get_name()),
+                        ModuleFlags.BIND_LAZY);
                 if (module != null) {
                     void* registrar;
                     module.symbol("register_module", out registrar);

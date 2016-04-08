@@ -40,7 +40,7 @@ namespace Valhalla.Screenshot {
             }
             this.move(-1, -1);
             this.resize(1, 1);
-            // Realize after setting the visual, else we'll get an opaque window.
+            // Realize after setting the visual, else we'll get an opaque window
             this.visible = true;
         }
 
@@ -49,8 +49,8 @@ namespace Valhalla.Screenshot {
             if (this.app_paintable) {
                 var style_context = get_style_context();
                 style_context.add_class(Gtk.STYLE_CLASS_RUBBERBAND);
-                style_context.render_background(cr, 0, 0, this.get_allocated_width(),
-                    this.get_allocated_height());
+                style_context.render_background(cr, 0, 0,
+                    this.get_allocated_width(), this.get_allocated_height());
                 style_context.render_frame(cr, 0, 0, this.get_allocated_width(),
                     this.get_allocated_height());
             }
@@ -123,7 +123,8 @@ namespace Valhalla.Screenshot {
                 selection_window.resize(1, 1);
             } else {
                 selection_window.move(draw_rectangle.x, draw_rectangle.y);
-                selection_window.resize(draw_rectangle.width, draw_rectangle.height);
+                selection_window.resize(draw_rectangle.width,
+                    draw_rectangle.height);
             }
 
             return true;
@@ -132,7 +133,8 @@ namespace Valhalla.Screenshot {
         var display = Gdk.Display.get_default();
         var pointer = display.get_device_manager().get_client_pointer();
         var keyboard = pointer.get_associated_device();
-        var cursor = new Gdk.Cursor.for_display(display, Gdk.CursorType.CROSSHAIR);
+        var cursor = new Gdk.Cursor.for_display(display,
+            Gdk.CursorType.CROSSHAIR);
 
         Func clean_up = () => {
             keyboard.ungrab(Gdk.CURRENT_TIME);
@@ -161,7 +163,8 @@ namespace Valhalla.Screenshot {
             else {
                 var real_callback = async_callback;
                 async_callback = () => {
-                    // let selection_window finish destruction so we don't capture it
+                    // let selection_window finish destruction so we don't
+                    // capture it
                     Timeout.add(200, () => {
                         pixbuf = take(rectangle);
                         Idle.add((owned) real_callback);
@@ -183,18 +186,20 @@ namespace Valhalla.Screenshot {
             return true;
         });
 
-        var res = pointer.grab(selection_window.get_window(), Gdk.GrabOwnership.NONE,
-            false, Gdk.EventMask.POINTER_MOTION_MASK | Gdk.EventMask.BUTTON_PRESS_MASK |
-            Gdk.EventMask.BUTTON_RELEASE_MASK, cursor, Gdk.CURRENT_TIME);
+        var res = pointer.grab(selection_window.get_window(),
+            Gdk.GrabOwnership.NONE, false, Gdk.EventMask.POINTER_MOTION_MASK |
+            Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.BUTTON_RELEASE_MASK,
+            cursor, Gdk.CURRENT_TIME);
         assert (res == Gdk.GrabStatus.SUCCESS);
 
-        // sometimes when DBus activated the keyboard may be grabbed for a short amount
-        // of time, so set up timeout and loop until we have it or we time out
+        // sometimes when DBus activated the keyboard may be grabbed for a short
+        // amount of time, so set up timeout and loop until we have it or we
+        // time out
         var start = (int) time_t();
         while (true) {
-            res = keyboard.grab(selection_window.get_window(), Gdk.GrabOwnership.NONE,
-                false, Gdk.EventMask.KEY_PRESS_MASK | Gdk.EventMask.KEY_RELEASE_MASK,
-                null, Gdk.CURRENT_TIME);
+            res = keyboard.grab(selection_window.get_window(),
+                Gdk.GrabOwnership.NONE, false, Gdk.EventMask.KEY_PRESS_MASK |
+                Gdk.EventMask.KEY_RELEASE_MASK, null, Gdk.CURRENT_TIME);
             if (res == Gdk.GrabStatus.SUCCESS || (int) time_t() - start > 1)
                 break;
         }
@@ -216,7 +221,8 @@ namespace Valhalla.Screenshot {
         var preview_too_large = true;
         while (preview_too_large)
             for (var i = 0; i < 2; i++) {
-                if (x / (float) screen_size.width > 0.75 || y / (float) screen_size.height > 0.75) {
+                if (x / (float) screen_size.width > 0.75 ||
+                        y / (float) screen_size.height > 0.75) {
                     x = (int) Math.floor(x*0.75);
                     y = (int) Math.floor(y*0.75);
                 } else

@@ -43,7 +43,8 @@ namespace Valhalla.Widgets {
             grid_row_counter++;
         }
 
-        private void change_display(Database.RemoteFile file, Gtk.StackTransitionType direction) {
+        private void change_display(Database.RemoteFile file,
+                                    Gtk.StackTransitionType direction) {
             var new_display = new DisplayFile(file);
             var parent = this.parent as FileWindow;
             var new_name = parent.visible_child_name + "_";
@@ -70,7 +71,9 @@ namespace Valhalla.Widgets {
                 var thumbnail_pixbuf = Thumbnailer.get_thumbnail.end(res);
                 Gtk.Image thumbnail;
                 if (thumbnail_pixbuf == null)
-                    thumbnail = new Gtk.Image.from_gicon(ContentType.get_icon(file.file_type), Gtk.IconSize.DIALOG);
+                    thumbnail = new Gtk.Image.from_gicon(
+                        ContentType.get_icon(file.file_type),
+                        Gtk.IconSize.DIALOG);
                 else
                     thumbnail = new Gtk.Image.from_pixbuf(thumbnail_pixbuf);
                 thumbnail.show();
@@ -84,11 +87,13 @@ namespace Valhalla.Widgets {
             build_row("Checksum:", file.crc32);
             build_row("File type:", file.file_type);
             if (file.file_size != null)
-                build_row("File size:", format_size(file.file_size, FormatSizeFlags.IEC_UNITS));
+                build_row("File size:", format_size(file.file_size,
+                    FormatSizeFlags.IEC_UNITS));
 
             forget_button.clicked.connect((_) => {
-                var msg = new Gtk.MessageDialog((Application.get_default() as valhalla).window,
-                    Gtk.DialogFlags.MODAL, Gtk.MessageType.QUESTION, Gtk.ButtonsType.YES_NO, "%s",
+                var msg = new Gtk.MessageDialog(
+                    get_main_window(), Gtk.DialogFlags.MODAL,
+                    Gtk.MessageType.QUESTION, Gtk.ButtonsType.YES_NO, "%s",
                     "This will remove the file from the files pane, but the file will remain available via the link. This action cannot be undone. Are you sure?");
                 if (msg.run() == Gtk.ResponseType.YES)
                     file.remove_from_database();
@@ -98,8 +103,9 @@ namespace Valhalla.Widgets {
             if (file.module == null || !file.module.implements_delete)
                 delete_button.sensitive = false;
             delete_button.clicked.connect((_) => {
-                var msg = new Gtk.MessageDialog((Application.get_default() as valhalla).window,
-                    Gtk.DialogFlags.MODAL, Gtk.MessageType.QUESTION, Gtk.ButtonsType.YES_NO, "%s",
+                var msg = new Gtk.MessageDialog(
+                    get_main_window(), Gtk.DialogFlags.MODAL,
+                    Gtk.MessageType.QUESTION, Gtk.ButtonsType.YES_NO, "%s",
                     "Are you sure you want to delete this file? This action cannot be undone");
                 if (msg.run() == Gtk.ResponseType.YES) {
                     forget_button.sensitive = false;
@@ -109,9 +115,9 @@ namespace Valhalla.Widgets {
                         try {
                             file.module.delete.end(res);
                             file.remove_from_database();
-                            (Application.get_default() as valhalla).window.stack_notify("File deleted");
+                            get_main_window().stack_notify("File deleted");
                         } catch (Valhalla.Error e) {
-                            (Application.get_default() as valhalla).window.display_error(e.message);
+                            get_main_window().display_error(e.message);
                         }
                         forget_button.sensitive = true;
                         delete_button.sensitive = true;
@@ -125,18 +131,21 @@ namespace Valhalla.Widgets {
                 prev_button.sensitive = false;
             else
                 prev_button.clicked.connect(() => {
-                    change_display(file.prev, Gtk.StackTransitionType.SLIDE_RIGHT);
+                    change_display(file.prev,
+                        Gtk.StackTransitionType.SLIDE_RIGHT);
                 });
             if (file.next == null)
                 next_button.sensitive = false;
             else
                 next_button.clicked.connect(() => {
-                    change_display(file.next, Gtk.StackTransitionType.SLIDE_LEFT);
+                    change_display(file.next,
+                        Gtk.StackTransitionType.SLIDE_LEFT);
                 });
 
             this.start_destroy.connect(() => {
                 var parent = this.parent as FileWindow;
-                parent.set_visible_child_full("files", Gtk.StackTransitionType.SLIDE_RIGHT);
+                parent.set_visible_child_full("files",
+                    Gtk.StackTransitionType.SLIDE_RIGHT);
                 Timeout.add(parent.get_transition_duration(), () => {
                     this.destroy();
                     return false;
@@ -161,8 +170,8 @@ namespace Valhalla.Widgets {
                     if (ev.button == 1)
                         this.activate();
                     else if (ev.button == 3 && this.selectable) {
-                        var app = Application.get_default() as valhalla;
-                        var context_button = app.window.context_revealer.get_child() as Gtk.ToggleButton;
+                        var context_button = get_main_window().context_revealer
+                            .get_child() as Gtk.ToggleButton;
                         context_button.active = true;
                         select_me_pls();
                     }
@@ -196,10 +205,13 @@ namespace Valhalla.Widgets {
             if (file.module == null || !file.module.implements_delete) {
                 this.selectable = false;
                 var warning_reveal = new Gtk.Revealer();
-                warning_reveal.transition_type = Gtk.RevealerTransitionType.SLIDE_LEFT;
+                warning_reveal.transition_type =
+                    Gtk.RevealerTransitionType.SLIDE_LEFT;
                 warning_reveal.reveal_child = false;
-                warning_reveal.add(new Gtk.Image.from_icon_name("dialog-warning", Gtk.IconSize.BUTTON));
-                this.bind_property("select-mode", warning_reveal, "reveal-child");
+                warning_reveal.add(new Gtk.Image.from_icon_name(
+                    "dialog-warning", Gtk.IconSize.BUTTON));
+                this.bind_property("select-mode", warning_reveal,
+                    "reveal-child");
                 inner.add(warning_reveal);
             }
 
@@ -257,42 +269,42 @@ namespace Valhalla.Widgets {
         }
 
         public override void drag_data_received(Gdk.DragContext context, int _,
-                int __, Gtk.SelectionData data, uint ___, uint time) {
+                                                int __, Gtk.SelectionData data,
+                                                uint ___, uint time) {
             Gtk.drag_finish(context, true, false, time);
             foreach (var path in data.get_uris()) {
                 assert (path.has_prefix("file://"));
                 path = path[7:path.length];
-                (Application.get_default() as valhalla).window.kickoff_upload.begin(path);
+                get_main_window().kickoff_upload.begin(path);
             }
         }
 
         private async void delete_selected() {
-            var app = Application.get_default() as valhalla;
-            app.window.delete_progress_reveal.reveal_child = true;
+            get_main_window().delete_progress_reveal.reveal_child = true;
             try {
                 foreach (var file in get_selected_rows()) {
                     yield file.module.delete(file.remote_path);
                     file.remove_from_database();
                 }
             } catch (Valhalla.Error e) {
-                app.window.display_error(e.message);
+                get_main_window().display_error(e.message);
             }
-            app.window.delete_progress_reveal.reveal_child = false;
-            app.window.deselect_button.active = false;
+            get_main_window().delete_progress_reveal.reveal_child = false;
+            get_main_window().deselect_button.active = false;
         }
 
         construct {
-            var app = Application.get_default() as valhalla;
-            db = app.database;
+            db = (Application.get_default() as valhalla).database;
 
             this.selected_rows_changed.connect(() => {
                 // app.window is null when we get constructed, so set this now
                 if (delete_button == null) {
-                    delete_button = app.window.delete_button;
+                    delete_button = get_main_window().delete_button;
                     delete_button.clicked.connect(() => {
                         var selected = this.get_selected_rows();
-                        var msg = new Gtk.MessageDialog((Application.get_default() as valhalla).window,
-                            Gtk.DialogFlags.MODAL, Gtk.MessageType.QUESTION, Gtk.ButtonsType.YES_NO,
+                        var msg = new Gtk.MessageDialog(get_main_window(),
+                            Gtk.DialogFlags.MODAL, Gtk.MessageType.QUESTION,
+                            Gtk.ButtonsType.YES_NO,
                             "You are about to delete %s file(s). This action cannot be undone. Are you sure?",
                             selected.length.to_string());
                         var response = msg.run();
@@ -302,8 +314,9 @@ namespace Valhalla.Widgets {
                     });
                 }
                 var selected = this.get_selected_rows();
-                var selection_indicator = app.window.selection_indicator;
-                selection_indicator.label = @"$(selected.length) files selected";
+                var selection_indicator = get_main_window().selection_indicator;
+                selection_indicator.label =
+                    @"$(selected.length) files selected";
                 if (selected.length > 0)
                     delete_button.sensitive = true;
                 else
@@ -315,7 +328,8 @@ namespace Valhalla.Widgets {
             var placeholder = new Gtk.Box(Gtk.Orientation.VERTICAL, 6);
             placeholder.add(new Gtk.Image.from_icon_name("view-grid-symbolic",
                 Gtk.IconSize.DIALOG));
-            placeholder.add(new Gtk.Label("You haven't uploaded any files yet"));
+            placeholder.add(
+                new Gtk.Label("You haven't uploaded any files yet"));
             placeholder.halign = Gtk.Align.CENTER;
             placeholder.valign = Gtk.Align.CENTER;
             placeholder.sensitive = false;
@@ -324,7 +338,8 @@ namespace Valhalla.Widgets {
 
             var drop_targets = new Gtk.TargetList(null);
             drop_targets.add_uri_targets(0);
-            Gtk.drag_dest_set(this, Gtk.DestDefaults.ALL, null, Gdk.DragAction.COPY);
+            Gtk.drag_dest_set(this, Gtk.DestDefaults.ALL, null,
+                Gdk.DragAction.COPY);
             Gtk.drag_dest_set_target_list(this, drop_targets);
 
             populate();
@@ -336,7 +351,6 @@ namespace Valhalla.Widgets {
 
 
     class FileWindow : Gtk.Stack {
-        private valhalla app;
         private Database.Database db;
         private bool select = false;
 
@@ -352,13 +366,13 @@ namespace Valhalla.Widgets {
         public void display_file(Database.RemoteFile file) {
             var displayfile = new DisplayFile(file);
             this.add_named(displayfile, "filedisplay");
-            this.set_visible_child_full("filedisplay", Gtk.StackTransitionType.SLIDE_LEFT);
-            app.window.main_window_stack.visible_child = this;
+            this.set_visible_child_full("filedisplay",
+                Gtk.StackTransitionType.SLIDE_LEFT);
+            get_main_window().main_window_stack.visible_child = this;
         }
 
         construct {
-            app = Application.get_default() as valhalla;
-            db = app.database;
+            db = (Application.get_default() as valhalla).database;
             var files = new Files();
             toggle_selection_mode.connect((b) => {
                 files.toggle_select_mode(b);

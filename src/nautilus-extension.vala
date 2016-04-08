@@ -1,5 +1,6 @@
 class ValhallaMenuProvider : Nautilus.MenuProvider, Object {
-    public virtual List<Nautilus.MenuItem>? get_file_items(Gtk.Widget window, List<Nautilus.FileInfo> files) {
+    public virtual List<Nautilus.MenuItem>? get_file_items(
+            Gtk.Widget window, List<Nautilus.FileInfo> files) {
         var gfiles = new List<File>();
         foreach (var file in files) {
             if (file.is_directory())
@@ -8,7 +9,8 @@ class ValhallaMenuProvider : Nautilus.MenuProvider, Object {
         }
 
         var list = new List<Nautilus.MenuItem>();
-        var item = new Nautilus.MenuItem("valhalla", "Upload with Valhalla", "");
+        var item = new Nautilus.MenuItem("valhalla", "Upload with Valhalla",
+            "");
         item.activate.connect(() => {
             var info = AppInfo.create_from_commandline("valhalla", null, 0);
             info.launch(gfiles, null);
@@ -17,7 +19,8 @@ class ValhallaMenuProvider : Nautilus.MenuProvider, Object {
         return list;
     }
 
-    public virtual List<Nautilus.MenuItem>? get_background_items(Gtk.Widget window, Nautilus.FileInfo current_folder) {
+    public virtual List<Nautilus.MenuItem>? get_background_items(
+            Gtk.Widget window, Nautilus.FileInfo current_folder) {
         return null;
     }
 }

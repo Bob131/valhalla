@@ -1,4 +1,7 @@
-private const string[] mimetype_locations = {"/etc/mime.types", "/etc/apache2/mime.types"};
+private const string[] mimetype_locations = {
+    "/etc/mime.types",
+    "/etc/apache2/mime.types"
+};
 
 namespace Valhalla {
     public errordomain Error {
@@ -20,8 +23,8 @@ namespace Valhalla {
 
         // must be called from the module, sets the URL from which the uploaded
         // file can be found        //
-        // don't try to catch errors from this function; it's mainly for signalling
-        // the upload() invoker
+        // don't try to catch errors from this function; it's mainly for
+        // signalling the upload() invoker
         public abstract void set_remote_path(string path) throws Error;
         public abstract signal void progress(uint64 bytes_uploaded);
         // must be called from module to commit the file to the database
@@ -97,7 +100,8 @@ namespace Valhalla {
                 if (Path.is_absolute(arg0) && !arg0.has_prefix("/usr"))
                     us = Path.get_dirname(arg0);
                 else
-                    us = Path.get_dirname(Path.build_filename(Environment.get_current_dir(), arg0));
+                    us = Path.get_dirname(Path.build_filename(
+                        Environment.get_current_dir(), arg0));
                 if (us.has_suffix(".libs"))
                     us = Path.build_filename(us, "..");
                 return us;
@@ -127,8 +131,10 @@ namespace Valhalla {
             public abstract Config.Settings settings {set; get;}
 
             public virtual bool implements_delete {get {return false;}}
-            public virtual async void @delete(string remote_path) throws Valhalla.Error {
-                throw new Valhalla.Error.NOT_IMPLEMENTED("Delete not implmented");
+            public virtual async void @delete(string remote_path)
+                    throws Valhalla.Error {
+                throw new Valhalla.Error.NOT_IMPLEMENTED(
+                    "Delete not implmented");
             }
 
             public abstract Config.Preference[] build_panel();

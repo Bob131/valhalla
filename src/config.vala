@@ -3,7 +3,8 @@ namespace Valhalla.Config {
     private KeyFile keyfile;
 
     public string config_directory() {
-        var dir = Path.build_filename(Environment.get_user_config_dir(), "valhalla");
+        var dir = Path.build_filename(Environment.get_user_config_dir(),
+            "valhalla");
         if (!FileUtils.test(dir, FileTest.EXISTS))
             DirUtils.create(dir, 0700);
         return dir;
