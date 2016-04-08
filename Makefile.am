@@ -1,2 +1,2 @@
-ACLOCAL_AMFLAGS = -I m4
-SUBDIRS	= libgd data src src/modules
+ACLOCAL_AMFLAGS=-I m4
+SUBDIRS=libgd data src src/modules

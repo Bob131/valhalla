@@ -17,6 +17,3 @@ so.bob131.valhalla.service: Makefile
 	$(AM_V_GEN) (echo '[D-BUS Service]'; \
 	             echo 'Name=so.bob131.valhalla'; \
 	             echo 'Exec=${bindir}/valhalla --gapplication-service') > $@.tmp && mv $@.tmp $@
-
-all:
-	glib-compile-resources so.bob131.valhalla.gresources.xml --target=so.bob131.valhalla.gresources.c --generate-source

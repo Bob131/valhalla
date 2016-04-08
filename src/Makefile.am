@@ -8,7 +8,7 @@ valhallaheader_DATA = valhalla.h
 
 
 libvalhalla_la_SOURCES = \
-	module-api.vala
+	libvalhalla.vala
 
 libvalhalla_la_VALAFLAGS = \
 	--pkg gio-2.0 \
@@ -17,8 +17,8 @@ libvalhalla_la_VALAFLAGS = \
 	--library valhalla \
 	-H valhalla.h \
 	--vapi $(top_srcdir)/vapi/valhalla.vapi \
-	--target-glib $(GLIB_REQUIRED) \
-	--enable-experimental-non-null
+	--enable-experimental-non-null \
+	$(valhalla_U_VALAFLAGS)
 
 libvalhalla_la_CFLAGS = \
 	-DVALHALLA_MODULES_MODULEDIR=\"$(pkglibdir)\" \
@@ -29,16 +29,23 @@ libvalhalla_la_LIBADD = \
 
 
 gd.vapi:
-	cp $(top_srcdir)/libgd/gd-1.0.vapi $(top_srcdir)/vapi
+	$(AM_V_GEN) cp $(top_srcdir)/libgd/gd-1.0.vapi $(top_srcdir)/vapi/gd-1.0.vapi
 
-BUILT_SOURCES = gd.vapi
+resource_files = $(shell $(GLIB_COMPILE_RESOURCES) --generate-dependencies --sourcedir=$(srcdir) gresources.xml)
+gresources.c: gresources.xml $(resource_files)
+	$(AM_V_GEN) $(GLIB_COMPILE_RESOURCES) --target=$@ --sourcedir=$(srcdir) --generate-source $<
+
+BUILT_SOURCES = gd.vapi gresources.c
 
 valhalla_SOURCES = \
-	../data/so.bob131.valhalla.gresources.c \
+	gresources.c \
+	gtk/files.vala \
+	gtk/preferences.vala \
+	gtk/transfers.vala \
+	gtk/window.vala \
 	config.vala \
 	database.vala \
-	gtk-widgets.vala \
-	modules.vala \
+	loader.vala \
 	screenshot.vala \
 	thumbnailer.vala \
 	valhalla.vala
@@ -56,8 +63,8 @@ valhalla_VALAFLAGS = \
 	--pkg gd-1.0 \
 	--pkg valhalla \
 	--vapidir $(top_srcdir)/vapi \
-	--target-glib $(GLIB_REQUIRED) \
-	--gresources $(top_srcdir)/data/so.bob131.valhalla.gresources.xml
+	--gresources gresources.xml \
+	$(valhalla_U_VALAFLAGS)
 
 valhalla_CFLAGS = \
 	-DVALHALLA_MODULES_MODULEDIR=\"$(pkglibdir)\" \
@@ -72,9 +79,7 @@ valhalla_LDADD = \
 
 
 valhalla_screenshot_SOURCES = valhalla-screenshot.vala
-valhalla_screenshot_VALAFLAGS = \
-	--pkg gio-2.0 \
-	--target-glib $(GLIB_REQUIRED)
+valhalla_screenshot_VALAFLAGS = --pkg gio-2.0
 valhalla_screenshot_CFLAGS = $(valhalla_CFLAGS)
 valhalla_screenshot_LDADD = $(valhalla_U_LIBS)
 
@@ -82,17 +87,17 @@ valhalla_screenshot_LDADD = $(valhalla_U_LIBS)
 nautilus_extensiondir = $(NAUTILUS_EXTENSION_DIR)
 nautilus_extension_LTLIBRARIES = libnautilus-valhalla.la
 
-libnautilus_valhalla_la_SOURCES = nautilus-extension.vala
+libnautilus_valhalla_la_SOURCES = nautilus-extension.c
 libnautilus_valhalla_la_VALAFLAGS = \
 	--pkg gio-2.0 \
 	--pkg gtk+-3.0 \
 	--pkg nautilus \
 	--vapidir $(top_srcdir)/vapi \
-	--target-glib $(GLIB_REQUIRED)
+	$(valhalla_U_VALAFLAGS)
 libnautilus_valhalla_la_CFLAGS = $(valhalla_U_CFLAGS)
 libnautilus_valhalla_la_LDFLAGS = -module -avoid-version
 libnautilus_valhalla_la_LIBADD = $(valhalla_U_LIBS)
 
 nautilus-extension.c:
-	$(VALAC) $(libnautilus_valhalla_la_VALAFLAGS) -C nautilus-extension.vala
+	$(AM_V_VALAC) $(VALAC) $(libnautilus_valhalla_la_VALAFLAGS) -C nautilus-extension.vala; \
 	$(SED) -i "s/(GType\*\* types/(const GType\*\* types/" nautilus-extension.c

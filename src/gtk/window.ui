@@ -1,5 +1,5 @@
 <interface>
-  <template class="ValhallaWidgetsMainWindow" parent="GtkApplicationWindow">
+  <template class="ValhallaWidgetsWindow" parent="GtkApplicationWindow">
     <property name="width_request">700</property>
     <property name="height_request">600</property>
     <child type="titlebar">

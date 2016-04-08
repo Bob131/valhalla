@@ -2,7 +2,8 @@ common_valaflags = \
 	--pkg gio-2.0 \
 	--pkg gtk+-3.0 \
 	--pkg valhalla \
-	--vapidir $(top_srcdir)/vapi
+	--vapidir $(top_srcdir)/vapi \
+	$(valhalla_U_VALAFLAGS)
 
 common_cflags = \
 	-fPIC \

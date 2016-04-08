@@ -2,9 +2,9 @@
 <gresources>
     <gresource prefix="/so/bob131/valhalla">
         <file compressed="true">gtk/files.ui</file>
-        <file compressed="true">gtk/main.ui</file>
-        <file compressed="true">gtk/prefs.ui</file>
-        <file compressed="true">gtk/prefs-list.ui</file>
+        <file compressed="true">gtk/preferences.ui</file>
+        <file compressed="true">gtk/preferences-list-row.ui</file>
         <file compressed="true">gtk/transfers.ui</file>
+        <file compressed="true">gtk/window.ui</file>
     </gresource>
 </gresources>

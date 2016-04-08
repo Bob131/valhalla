@@ -16,7 +16,7 @@ class DBusHooks : Object {
 // * about dialog
 // * move all non-UI-specific code into separate lib for alternate UIs
 class valhalla : VApplication, Gtk.Application {
-    public Widgets.MainWindow window {private set; get;}
+    public Widgets.Window window {private set; get;}
     public Database.Database database {private set; get;}
 
     private string[] _args;
@@ -35,7 +35,7 @@ class valhalla : VApplication, Gtk.Application {
         if (database == null)
             database = new Database.Database();
         if (window == null) {
-            window = new Widgets.MainWindow();
+            window = new Widgets.Window();
             this.add_window(window);
         } else
             window.present();
