@@ -10,7 +10,7 @@ gschemas.compiled
 /*.tab.c
 /*~
 .*.sw*
-/.dirstamp
+.dirstamp
 *.stamp*
 *.la
 *.lo
@@ -18,9 +18,9 @@ Makefile
 Makefile.in
 tags
 .libs
-/src/valhalla
-/src/valhalla-screenshot
-/src/valhalla.h
+/src/valhalla/valhalla
+/src/valhalla/valhalla-screenshot
+/src/libvalhalla/valhalla.h
 /vapi/valhalla.vapi
 /vapi/gd-1.0.vapi
 /GPATH
@@ -59,6 +59,5 @@ tags
 /tags
 /m4
 *.c
-/data/.dirstamp
 /data/*.service
 /data/*.desktop

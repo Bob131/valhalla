@@ -7,11 +7,11 @@ common_valaflags = \
 
 common_cflags = \
 	-fPIC \
-	-I $(top_srcdir)/src \
+	-I $(top_srcdir)/src/libvalhalla \
 	$(valhalla_U_CFLAGS)
 
 common_libadd = \
-	$(top_srcdir)/src/libvalhalla.la \
+	$(top_srcdir)/src/libvalhalla/libvalhalla.la \
 	$(valhalla_U_LIBS)
 
 common_ldflags = -module -avoid-version -shared -export-dynamic

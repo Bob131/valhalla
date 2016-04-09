@@ -55,6 +55,8 @@ Makefile
 libgd/Makefile
 data/Makefile
 src/Makefile
+src/libvalhalla/Makefile
 src/modules/Makefile
+src/valhalla/Makefile
 ])
 AC_OUTPUT

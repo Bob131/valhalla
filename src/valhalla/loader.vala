@@ -26,11 +26,7 @@ namespace Valhalla.Modules {
         if (modules == null)
             modules = {};
 
-        var paths = get_paths();
-        if (paths.length == 2)
-            paths[0] = Path.build_filename(paths[0], ".libs");
-
-        foreach (var path in paths) {
+        foreach (var path in get_paths()) {
             if (!FileUtils.test(path, FileTest.EXISTS))
                 continue;
             var file = File.new_for_path(path);
@@ -63,6 +59,13 @@ namespace Valhalla.Modules {
                 } else
                     warning("Could not load %s".printf(Module.error()));
             }
+        }
+
+        if (modules.length == 0) {
+            new Gtk.MessageDialog(null, Gtk.DialogFlags.MODAL,
+                Gtk.MessageType.ERROR, Gtk.ButtonsType.CLOSE, "%s",
+                "We weren't able to find any file upload modules").run();
+            Posix.exit(1);
         }
     }
 }

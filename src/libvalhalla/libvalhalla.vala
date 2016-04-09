@@ -90,35 +90,13 @@ namespace Valhalla {
     }
 
     namespace Modules {
-        private string? whereami() {
-            var app = GLib.Application.get_default() as VApplication;
-            var arg0 = ((!) app).args[0];
-            if ("_" in Environment.list_variables())
-                return Path.get_dirname((!) Environment.get_variable("_"));
-            else if ("valhalla" in arg0) {
-                string us;
-                if (Path.is_absolute(arg0) && !arg0.has_prefix("/usr"))
-                    us = Path.get_dirname(arg0);
-                else
-                    us = Path.get_dirname(Path.build_filename(
-                        Environment.get_current_dir(), arg0));
-                if (us.has_suffix(".libs"))
-                    us = Path.build_filename(us, "..");
-                return us;
-            }
-            try {
-                return FileUtils.read_link("/proc/self/exe");
-            } catch (FileError e) {
-                return null;
-            }
-        }
         private extern const string MODULEDIR;
         public string[] get_paths() {
-            string[] ret = {};
-            if (whereami() != null)
-                ret += Path.build_filename((!) whereami(), "modules");
-            ret += MODULEDIR;
-            return ret;
+            return {
+                Path.build_filename(Environment.get_user_data_dir(),
+                    "valhalla"),
+                MODULEDIR
+            };
         }
 
         [CCode (has_target = false)]
