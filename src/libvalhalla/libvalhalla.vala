@@ -5,11 +5,8 @@ private const string[] mimetype_locations = {
 
 namespace Valhalla {
     public errordomain Error {
-        MODULE_ERROR, CANCELLED, INVALID_REMOTE_PATH, NOT_IMPLEMENTED;
-    }
-
-    public interface VApplication : Application {
-        public abstract string[] args {get;}
+        CONFIG_ERROR, MODULE_ERROR, CANCELLED, INVALID_REMOTE_PATH,
+        NOT_IMPLEMENTED;
     }
 
     public interface Transfer : Object {
@@ -55,23 +52,13 @@ namespace Valhalla {
                 return "." + file_name.reverse().split(".")[0].reverse();
             return "";
         }
-
-        // created for the convinience of derivative implmentations;
-        // module writers should ignore this
-        protected virtual void init_for_path(string path) {
-            var file = File.new_for_path(path);
-            uint8[] tmp;
-            file.load_contents(null, out tmp, null);
-
-            file_contents = tmp;
-            timestamp = Time.gm(time_t());
-            file_name = Path.get_basename(path);
-            file_type = ContentType.guess(path, tmp, null);
-            cancellable = new Cancellable();
-        }
     }
 
     namespace Config {
+        public errordomain Error {
+            KEY_NOT_SET;
+        }
+
         public interface Settings : Object {
             public abstract string? @get(string key);
         }
@@ -85,7 +72,7 @@ namespace Valhalla {
             public signal void change_notify();
 
             public abstract string read();
-            public abstract void write(string val);
+            public abstract void write(string? val);
         }
     }
 

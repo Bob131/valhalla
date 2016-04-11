@@ -1,7 +1,4 @@
 namespace Valhalla.Config {
-    public MutableSettings settings;
-    private KeyFile keyfile;
-
     public string config_directory() {
         var dir = Path.build_filename(Environment.get_user_config_dir(),
             "valhalla");
@@ -10,64 +7,110 @@ namespace Valhalla.Config {
         return dir;
     }
 
-    private string config_path() {
-        return Path.build_filename(config_directory(), "valhalla.conf");
-    }
+    protected delegate void Callback();
 
-    public class MutableSettings : Config.Settings, Object {
-        public KeyFile global {construct; private get;}
+    public abstract class MutableSettings : Config.Settings, Object {
+        public KeyFile keyfile {construct; private get;}
         public string section {construct; private get;}
-        private Gee.HashMap<string, string> defaults;
+        protected unowned Callback write;
+        protected unowned Callback load;
+        private Gee.HashMap<string, string> defaults =
+            new Gee.HashMap<string, string>();
 
         public new string? @get(string key) {
+            load();
             try {
-                return global.get_value(section, key);
+                return keyfile.get_value(section, key);
             } catch (KeyFileError e) {
+                // if SettingsContext.load has done its job properly, this
+                // should be okay
+                if (!(e is KeyFileError.GROUP_NOT_FOUND ||
+                        e is KeyFileError.KEY_NOT_FOUND))
+                    error(@"Failed fetching value of '$key': %s", e.message);
+
                 if (defaults.has_key(key))
                     return defaults[key];
                 return null;
             }
         }
 
-        public new void @set(string key, string val) {
-            if (val == "") {
-                if (global.has_key(section, key))
-                    global.remove_key(section, key);
-                else
-                    return;
-            } else
-                global.set_value(section, key, val);
-            FileUtils.set_contents(config_path(), global.to_data());
+        public new void @set(string key, string? val) {
+            load();
+            try {
+                if (val == null) {
+                    if (keyfile.has_key(section, key))
+                        keyfile.remove_key(section, key);
+                    else
+                        return;
+                } else
+                    keyfile.set_value(section, key, (!) val);
+            } catch (KeyFileError e) {
+                // bad news
+                error("Failed to set key '%s' with value '%s': %s", key,
+                    (!) (val ?? "(null)"), e.message);
+            }
+            write();
         }
 
         public void set_default(string key, string val) {
             defaults[key] = val;
         }
-
-        public MutableSettings(KeyFile keyfile, string section) {
-            Object(global: keyfile, section: section);
-            defaults = new Gee.HashMap<string, string>();
-        }
     }
 
-    private void init_keyfile() {
-        keyfile = new KeyFile();
-        try {
-            keyfile.load_from_file(config_path(),
-                KeyFileFlags.KEEP_COMMENTS|KeyFileFlags.KEEP_TRANSLATIONS);
-        } catch (Error e) {
-            FileUtils.set_contents(config_path(), "");
-            init_keyfile();
-        }
-    }
+    // have MutableSettings instances share a KeyFile instance. This way, if the
+    // file on disk has to be clobbered, we don't have several different sets
+    // of data in memory overwriting one another's data on disk
+    public class SettingsContext : Object {
+        public KeyFile keyfile {construct; private get;}
+        public MutableSettings app_settings {private set; get;}
 
-    public void load() {
-        if (settings != null)
-            return;
-        init_keyfile();
-        settings = new MutableSettings(keyfile, "valhalla");
-        foreach (var module in Modules.get_modules()) {
-            module.settings = new MutableSettings(keyfile, module.name);
+        private void warn(GLib.Error e) {
+            warning("Failed operation on valhalla.conf: %s", e.message);
+        }
+
+        private string config_path() {
+            return Path.build_filename(config_directory(), "valhalla.conf");
+        }
+
+        private void write() {
+            try {
+                FileUtils.set_contents(config_path(), keyfile.to_data());
+            } catch (FileError e) {
+                warn(e);
+            }
+        }
+
+        private void load() {
+            try {
+                keyfile.load_from_file(config_path(),
+                    KeyFileFlags.KEEP_COMMENTS|KeyFileFlags.KEEP_TRANSLATIONS);
+            } catch (KeyFileError e) {
+                warn(e);
+            } catch (FileError e) {
+                if (e is FileError.NOENT)
+                    write();
+                else
+                    warn(e);
+            }
+        }
+
+        private class _MutableSettings : MutableSettings {
+            public _MutableSettings(KeyFile kf, string s, Callback w,
+                                    Callback l) {
+                Object(keyfile: kf, section: s);
+                write = w;
+                load = l;
+            }
+        }
+        public new MutableSettings @get(string section) {
+            return (MutableSettings) new _MutableSettings(keyfile, section,
+                write, load);
+        }
+
+        public SettingsContext() {
+            Object(keyfile: new KeyFile());
+            load();
+            app_settings = this["valhalla"];
         }
     }
 }

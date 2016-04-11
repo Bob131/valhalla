@@ -12,8 +12,14 @@ class ValhallaMenuProvider : Nautilus.MenuProvider, Object {
         var item = new Nautilus.MenuItem("valhalla", "Upload with Valhalla",
             "");
         item.activate.connect(() => {
-            var info = AppInfo.create_from_commandline("valhalla", null, 0);
-            info.launch(gfiles, null);
+            var info = new DesktopAppInfo("so.bob131.valhalla.desktop");
+            try {
+                info.launch(gfiles, null);
+            } catch (Error e) {
+                new Gtk.MessageDialog(null, 0, Gtk.MessageType.ERROR,
+                    Gtk.ButtonsType.CLOSE, "Failed to launch Valhalla: %s",
+                    e.message).show();
+            }
         });
         list.append(item);
         return list;

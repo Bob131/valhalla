@@ -1,7 +1,7 @@
 using Valhalla;
 
 [DBus (name = "so.bob131.valhalla")]
-class DBusHooks : Object {
+public class DBusHooks : Object {
     [DBus (visible = false)]
     public signal void capture_screenshot_signal();
 
@@ -11,34 +11,29 @@ class DBusHooks : Object {
 }
 
 // TODO:
-// * make Modules and Config less garbage
 // * module index functionality
 // * about dialog
 // * move all non-UI-specific code into separate lib for alternate UIs
-class valhalla : VApplication, Gtk.Application {
-    public Widgets.Window window {private set; get;}
-    public Database.Database database {private set; get;}
-
-    private string[] _args;
-    public string[] args {get {
-        return _args;
-    }}
+class valhalla : Gtk.Application {
+    public Widgets.Window? window {private set; get; default = null;}
+    public Database.Database database {construct; get;}
+    public Config.SettingsContext settings_context {construct; get;}
+    public Thumbnailer thumbnailer {construct; get;}
+    public Modules.Loader modules {private set; get;}
 
     protected override void open(File[] files, string _) {
         activate();
         foreach (var file in files)
-            window.kickoff_upload.begin(file.get_path());
+            if (file.get_path() != null)
+                ((!) window).kickoff_upload.begin((!) file.get_path());
     }
 
     protected override void activate() {
-        Config.load();
-        if (database == null)
-            database = new Database.Database();
         if (window == null) {
-            window = new Widgets.Window();
-            this.add_window(window);
+            window = new Widgets.Window(this);
+            this.add_window((!) window);
         } else
-            window.present();
+            ((!) window).present();
     }
 
     protected override bool dbus_register(DBusConnection connection,
@@ -50,9 +45,9 @@ class valhalla : VApplication, Gtk.Application {
         hooks.capture_screenshot_signal.connect(() => {
             if (window == null) {
                 activate();
-                window.one_shot = true;
+                ((!) window).one_shot = true;
             }
-            window.capture_screenshot.begin();
+            ((!) window).capture_screenshot.begin();
         });
 
         connection.register_object(object_path, hooks);
@@ -64,17 +59,16 @@ class valhalla : VApplication, Gtk.Application {
         base.dbus_unregister(connection, object_path);
     }
 
-    public new int run() {
-        return base.run(this.args);
-    }
-
-    public valhalla(string[] args) {
+    public valhalla() {
         Object(application_id: "so.bob131.valhalla",
-            flags: ApplicationFlags.HANDLES_OPEN);
-        _args = args;
+            flags: ApplicationFlags.HANDLES_OPEN,
+            database: new Database.Database(),
+            settings_context: new Config.SettingsContext(),
+            thumbnailer: new Thumbnailer());
+        modules = new Modules.Loader(settings_context);
     }
 
     public static int main(string[] args) {
-        return new valhalla(args).run();
+        return new valhalla().run(args);
     }
 }

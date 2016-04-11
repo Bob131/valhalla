@@ -32,8 +32,8 @@ namespace Valhalla.Screenshot {
             Object(type: Gtk.WindowType.POPUP);
             var screen = Gdk.Screen.get_default();
             if (screen != null) {
-                var visual = screen.get_rgba_visual();
-                if (screen.is_composited() && visual != null) {
+                var visual = ((!) screen).get_rgba_visual();
+                if (((!) screen).is_composited() && visual != null) {
                     this.app_paintable = true;
                     this.set_visual(visual);
                 }
@@ -68,9 +68,13 @@ namespace Valhalla.Screenshot {
 
     public Gdk.Pixbuf? take_window_at_point(int x, int y) {
         var screen = Gdk.Screen.get_default();
-        var window_stack = screen.get_window_stack();
+        if (screen == null)
+            return null;
+        var window_stack = ((!) screen).get_window_stack();
+        if (window_stack == null)
+            return null;
 
-        unowned List<weak Gdk.Window> _window_stack = window_stack;
+        unowned List<weak Gdk.Window> _window_stack = (!) window_stack;
         _window_stack.reverse();
 
         foreach (var window in _window_stack) {
@@ -84,7 +88,7 @@ namespace Valhalla.Screenshot {
             point_rectangle.height = 1;
 
             if (window_rectangle.intersect(point_rectangle, null))
-                if (screen.is_composited())
+                if (((!) screen).is_composited())
                     return take(window_rectangle);
                 else
                     return Gdk.pixbuf_get_from_window(window, 0, 0,
@@ -130,23 +134,25 @@ namespace Valhalla.Screenshot {
             return true;
         });
 
-        var display = Gdk.Display.get_default();
-        var pointer = display.get_device_manager().get_client_pointer();
-        var keyboard = pointer.get_associated_device();
-        var cursor = new Gdk.Cursor.for_display(display,
-            Gdk.CursorType.CROSSHAIR);
+        var _display = Gdk.Display.get_default();
+        if (_display == null)
+            return null;
+        var display = (!) _display;
+        var seat = display.get_default_seat();
 
         Func clean_up = () => {
-            keyboard.ungrab(Gdk.CURRENT_TIME);
-            pointer.ungrab(Gdk.CURRENT_TIME);
+            seat.ungrab();
             selection_window.destroy();
         };
 
         Gdk.Pixbuf? pixbuf = null;
 
-        SourceFunc? async_callback = null;
+        // set to null to squash 'unassigned local var' error; in reality this
+        // should always be callable
+        SourceFunc? return_pixbuf = null;
+        SourceFunc? timeout = null;
         selection_window.destroy.connect_after(() => {
-            Idle.add((owned) async_callback);
+            Idle.add((!) ((owned) timeout ?? (owned) return_pixbuf));
         });
 
         selection_window.button_release_event.connect((event) => {
@@ -158,21 +164,19 @@ namespace Valhalla.Screenshot {
             rectangle.width = (rectangle.x - (int)event.x_root).abs();
             rectangle.height = (rectangle.y - (int)event.y_root).abs();
 
-            if ((rectangle.width == 0) || (rectangle.height == 0))
+            if ((rectangle.width < 5) || (rectangle.height < 5))
                 pixbuf = take_window_at_point(rectangle.x, rectangle.y);
-            else {
-                var real_callback = async_callback;
-                async_callback = () => {
+            else
+                timeout = () => {
                     // let selection_window finish destruction so we don't
                     // capture it
                     Timeout.add(200, () => {
                         pixbuf = take(rectangle);
-                        Idle.add((owned) real_callback);
+                        Idle.add((!)(owned) return_pixbuf);
                         return false;
                     });
                     return false;
                 };
-            }
 
             clean_up();
 
@@ -186,26 +190,13 @@ namespace Valhalla.Screenshot {
             return true;
         });
 
-        var res = pointer.grab(selection_window.get_window(),
-            Gdk.GrabOwnership.NONE, false, Gdk.EventMask.POINTER_MOTION_MASK |
-            Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.BUTTON_RELEASE_MASK,
-            cursor, Gdk.CURRENT_TIME);
+        var res = seat.grab((!) selection_window.get_window(),
+            Gdk.SeatCapabilities.ALL, true,
+            new Gdk.Cursor.for_display(display, Gdk.CursorType.CROSSHAIR),
+            null, null);
         assert (res == Gdk.GrabStatus.SUCCESS);
 
-        // sometimes when DBus activated the keyboard may be grabbed for a short
-        // amount of time, so set up timeout and loop until we have it or we
-        // time out
-        var start = (int) time_t();
-        while (true) {
-            res = keyboard.grab(selection_window.get_window(),
-                Gdk.GrabOwnership.NONE, false, Gdk.EventMask.KEY_PRESS_MASK |
-                Gdk.EventMask.KEY_RELEASE_MASK, null, Gdk.CURRENT_TIME);
-            if (res == Gdk.GrabStatus.SUCCESS || (int) time_t() - start > 1)
-                break;
-        }
-        assert (res == Gdk.GrabStatus.SUCCESS);
-
-        async_callback = take_interactive.callback;
+        return_pixbuf = take_interactive.callback;
         yield;
 
         return pixbuf;
@@ -214,7 +205,7 @@ namespace Valhalla.Screenshot {
     public Gdk.Pixbuf scale_for_preview(Gdk.Pixbuf input, Gdk.Screen screen) {
         Gdk.Rectangle screen_size;
         screen.get_monitor_geometry(screen.get_monitor_at_window(
-            screen.get_active_window()), out screen_size);
+            (!) screen.get_active_window()), out screen_size);
 
         var x = input.width;
         var y = input.height;

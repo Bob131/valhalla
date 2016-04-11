@@ -1,45 +1,16 @@
-namespace Valhalla.Thumbnailer {
+class Valhalla.Thumbnailer : Object {
     private const string keyfile_group = "Thumbnailer Entry";
-    private Gee.HashMap<string, string>? mime_lookup = null;
+    private const string thumbnailer_path = "/usr/share/thumbnailers";
+    private Gee.HashMap<string, string> mime_lookup =
+        new Gee.HashMap<string, string>();
 
-    private void load() {
-        if (mime_lookup == null) {
-            mime_lookup = new Gee.HashMap<string, string>();
-            var file = File.new_for_path("/usr/share/thumbnailers");
-            FileEnumerator enumerator;
-            try {
-                enumerator = file.enumerate_children("*", 0);
-            } catch (GLib.Error e) {
-                return;
-            }
-            FileInfo info;
-            while ((info = enumerator.next_file()) != null) {
-                var thumbnailer = new KeyFile();
-                var path =
-                    file.resolve_relative_path(info.get_name()).get_path();
-                try {
-                    thumbnailer.load_from_file(path, 0);
-                    var cmd = thumbnailer.get_string(keyfile_group, "Exec");
-                    var mimetypes = thumbnailer.get_string(keyfile_group,
-                        "MimeType");
-                    foreach (var mimetype in mimetypes.split(";"))
-                        mime_lookup[mimetype] = cmd;
-                } catch (KeyFileError e) {
-                    continue;
-                }
-            }
-        }
-    }
-
-    private string? build_path(Database.RemoteFile file) {
+    private string build_path(Database.RemoteFile file) {
         var path_hash = Checksum.compute_for_string(ChecksumType.MD5,
             file.remote_path);
         var cache_dir = Path.build_filename(Environment.get_user_cache_dir(),
             "valhalla");
         Posix.mkdir(cache_dir, 0700);
-        var thumbnail_path = Path.build_filename(cache_dir,
-            @"$(path_hash).png");
-        return thumbnail_path;
+        return Path.build_filename(cache_dir, @"$(path_hash).png");
     }
 
     public void delete_thumbnail(Database.RemoteFile file) {
@@ -54,12 +25,17 @@ namespace Valhalla.Thumbnailer {
             path = file.local_filename;
         var thumbnail_path = build_path(file);
         uint8[] file_contents;
-        FileUtils.get_data(path, out file_contents);
+        try {
+            FileUtils.get_data((!) path, out file_contents);
+        } catch (FileError e) {
+            warning("Creating thumbnail failed: %s", e.message);
+            return null;
+        }
         var crc = ZLib.Utility.adler32(1, file_contents);
         if ("%08x".printf((uint) crc) == file.crc32) {
             if (file.file_type.has_prefix("image/")) {
                 try {
-                    var pixbuf = new Gdk.Pixbuf.from_file_at_scale(path,
+                    var pixbuf = new Gdk.Pixbuf.from_file_at_scale((!) path,
                         256, 256, true);
                     pixbuf.save(thumbnail_path, "png");
                     return pixbuf;
@@ -71,16 +47,16 @@ namespace Valhalla.Thumbnailer {
                 cmd = cmd.replace("%%", "%");
                 // size in pixels
                 cmd = cmd.replace("%s", "256");
-                cmd = cmd.replace("%i", Shell.quote(path));
-                cmd = cmd.replace("%u", Shell.quote("file://" + path));
+                cmd = cmd.replace("%i", Shell.quote((!) path));
+                cmd = cmd.replace("%u", Shell.quote(@"file://$((!) path)"));
                 cmd = cmd.replace("%o", Shell.quote(thumbnail_path));
-                var p = new Subprocess.newv({"/bin/sh", "-c", cmd},
-                    SubprocessFlags.INHERIT_FDS);;
                 try {
+                    var p = new Subprocess.newv({"/bin/sh", "-c", cmd},
+                        SubprocessFlags.INHERIT_FDS);;
                     yield p.wait_check_async();
                     return new Gdk.Pixbuf.from_file(thumbnail_path);
-                } catch {
-                    ;
+                } catch (GLib.Error e) {
+                    warning("Creating thumbnail failed: %s", e.message);
                 }
             }
         }
@@ -92,29 +68,61 @@ namespace Valhalla.Thumbnailer {
         if (FileUtils.test(thumbnail_path, FileTest.EXISTS))
             try {
                 return new Gdk.Pixbuf.from_file(thumbnail_path);
-            } catch {
-                ;
-            }
-        load();
+            } catch {}
         if (!mime_lookup.has_key(file.file_type) &&
                 !file.file_type.has_prefix("image/"))
             return null;
-        else if (FileUtils.test(file.local_filename, FileTest.EXISTS)) {
+        else if (file.local_filename != null &&
+                FileUtils.test((!) file.local_filename, FileTest.EXISTS)) {
             return yield create_thumbnail(file);
         } else {
-            assert (file.remote_path != null);
             FileIOStream fstream;
-            var tmp_path = File.new_tmp(null, out fstream).get_path();
+            string tmp_path;
+            try {
+                tmp_path = (!) File.new_tmp(null, out fstream).get_path();
+            } catch (GLib.Error e) {
+                warning("Creating thumbnail failed: %s", e.message);
+                return null;
+            }
             var session = new Soup.Session();
             var message = new Soup.Message("GET", file.remote_path);
-            var istream = yield session.send_async(message);
-            yield fstream.output_stream.splice_async(istream,
-                OutputStreamSpliceFlags.CLOSE_SOURCE|
-                OutputStreamSpliceFlags.CLOSE_TARGET);
+            try {
+                var istream = yield session.send_async(message);
+                yield fstream.output_stream.splice_async(istream,
+                    OutputStreamSpliceFlags.CLOSE_SOURCE|
+                    OutputStreamSpliceFlags.CLOSE_TARGET);
+            } catch (GLib.Error e) {
+                warning("Creating thumbnail failed: %s", e.message);
+                return null;
+            }
             var pixbuf = yield create_thumbnail(file, tmp_path);
             FileUtils.unlink(tmp_path);
             return pixbuf;
         }
-        return null;
+    }
+
+    construct {
+        Dir dir;
+        try {
+            dir = Dir.open(thumbnailer_path);
+        } catch (GLib.FileError e) {
+            error("Failed to initialize thumbnailer: %s", e.message);
+        }
+
+        string? filename;
+        while ((filename = dir.read_name()) != null) {
+            var path = Path.build_filename(thumbnailer_path, (!) filename);
+            var thumbnailer = new KeyFile();
+            try {
+                thumbnailer.load_from_file(path, 0);
+                var cmd = thumbnailer.get_string(keyfile_group, "Exec");
+                var mimetypes = thumbnailer.get_string(keyfile_group,
+                    "MimeType");
+                foreach (var mimetype in mimetypes.split(";"))
+                    mime_lookup[mimetype] = cmd;
+            } catch (GLib.Error e) {
+                // continue
+            }
+        }
     }
 }

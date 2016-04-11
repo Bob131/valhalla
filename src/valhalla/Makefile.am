@@ -30,13 +30,11 @@ valhalla_VALAFLAGS = \
 	--pkg gtk+-3.0 \
 	--pkg gmodule-2.0 \
 	--pkg zlib \
-	--pkg libnotify \
 	--pkg posix \
 	--pkg sqlite3 \
 	--pkg libsoup-2.4 \
 	--pkg gd-1.0 \
 	--pkg valhalla \
-	--vapidir $(top_srcdir)/vapi \
 	--gresources gresources.xml \
 	$(valhalla_U_VALAFLAGS)
 
@@ -53,7 +51,7 @@ valhalla_LDADD = \
 
 
 valhalla_screenshot_SOURCES = valhalla-screenshot.vala
-valhalla_screenshot_VALAFLAGS = --pkg gio-2.0
+valhalla_screenshot_VALAFLAGS = --pkg gio-2.0 $(valhalla_U_VALAFLAGS)
 valhalla_screenshot_CFLAGS = $(valhalla_CFLAGS)
 valhalla_screenshot_LDADD = $(valhalla_U_LIBS)
 
@@ -64,14 +62,14 @@ nautilus_extension_LTLIBRARIES = libnautilus-valhalla.la
 libnautilus_valhalla_la_SOURCES = nautilus-extension.c
 libnautilus_valhalla_la_VALAFLAGS = \
 	--pkg gio-2.0 \
+	--pkg gio-unix-2.0 \
 	--pkg gtk+-3.0 \
 	--pkg nautilus \
-	--vapidir $(top_srcdir)/vapi \
 	$(valhalla_U_VALAFLAGS)
 libnautilus_valhalla_la_CFLAGS = $(valhalla_U_CFLAGS)
 libnautilus_valhalla_la_LDFLAGS = -module -avoid-version
 libnautilus_valhalla_la_LIBADD = $(valhalla_U_LIBS)
 
 nautilus-extension.c:
-	$(AM_V_VALAC) $(VALAC) $(libnautilus_valhalla_la_VALAFLAGS) -C nautilus-extension.vala; \
+	$(AM_V_VALAC) $(VALAC) $(libnautilus_valhalla_la_VALAFLAGS) -C nautilus-extension.vala && \
 	$(SED) -i "s/(GType\*\* types/(const GType\*\* types/" nautilus-extension.c

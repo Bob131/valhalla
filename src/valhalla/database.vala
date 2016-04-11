@@ -3,18 +3,20 @@ namespace Valhalla.Database {
         public Time? timestamp {set; get; default=null;}
         public string? crc32 {set; get; default=null;}
         public string? local_filename {set; get; default=null;}
-        public string? file_type {set; get; default=null;}
+        public string file_type {set; get; default="application/octect-stream";}
         public uint64? file_size {set; get; default=null;}
         public string remote_path {set; get;}
         public string? module_name {set; get; default=null;}
 
-        private Modules.BaseModule? _module;
-        private bool _module_set = false;
-        public Modules.BaseModule? module {get {
-            if (!_module_set)
-                _module = Modules.get_module(module_name);
-            _module_set = true;
-            return _module;
+        public Modules.BaseModule? module {owned get {
+            if (module_name == null)
+                return null;
+            return ((valhalla) Application.get_default())
+                .modules[(!) module_name];
+        }}
+
+        public string display_name {owned get {
+            return Path.get_basename((!) (local_filename ?? remote_path));
         }}
 
         private Database db;
@@ -46,11 +48,11 @@ namespace Valhalla.Database {
                 if (val == null)
                     continue;
                 if (col == "timestamp")
-                    this.timestamp = Time.gm((time_t) uint64.parse(val));
+                    this.timestamp = Time.gm((time_t) uint64.parse((!) val));
                 else if (col == "file_size")
-                    this.file_size = uint64.parse(val);
+                    this.file_size = uint64.parse((!) val);
                 else
-                    this[col] = val;
+                    this[col] = (!) val;
             }
         }
     }
@@ -60,7 +62,7 @@ namespace Valhalla.Database {
         public RemoteFile[] files {get{
             if (files_cache == null)
                 query(false);
-            return files_cache.data;
+            return ((!) files_cache).data;
         }}
 
         private Sqlite.Database db;
@@ -92,9 +94,10 @@ namespace Valhalla.Database {
             var col_args = new Gee.HashMap<string, string>();
             var va = va_list();
             while (args) {
-                string? column = va.arg();
-                if (column == null)
+                string? _col = va.arg();
+                if (_col == null)
                     break;
+                var column = (!) _col;
                 assert (!(@" $column " in sql));
                 if ("WHERE" in sql)
                     sql += " AND ";
@@ -123,7 +126,8 @@ namespace Valhalla.Database {
         public signal void committed();
 
         private void delete_file(RemoteFile file) {
-            Thumbnailer.delete_thumbnail(file);
+            ((valhalla) Application.get_default()).thumbnailer
+                .delete_thumbnail(file);
             Sqlite.Statement stmt;
             db.prepare_v2("DELETE FROM Files WHERE remote_path = $remote_path",
                 -1, out stmt);

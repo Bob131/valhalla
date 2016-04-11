@@ -13,7 +13,8 @@ namespace Valhalla.Widgets {
             public ListRow(Modules.BaseModule module) {
                 Object(module: module);
                 module_name.label = module.pretty_name;
-                module_description.label = @"<small>$(module.description)</small>";
+                module_description.label =
+                    @"<small>$(module.description)</small>";
             }
         }
 
@@ -26,15 +27,17 @@ namespace Valhalla.Widgets {
         private void module_selected(Gtk.ListBoxRow? row) {
             if (row == null)
                 return;
-            var module = (row.get_child() as ListRow).module;
-            Config.settings["module"] = module.name;
+            var module = ((ListRow) ((!) row).get_child()).module;
+            get_app().settings_context.app_settings["module"] = module.name;
             foreach (var child in controls.get_children())
                 child.destroy();
             if (!module.implements_delete) {
                 var caution = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 6);
                 caution.halign = Gtk.Align.CENTER;
-                caution.add(new Gtk.Image.from_icon_name("dialog-warning", Gtk.IconSize.LARGE_TOOLBAR));
-                caution.add(new Gtk.Label("This module does not support file deletion"));
+                caution.add(new Gtk.Image.from_icon_name("dialog-warning",
+                    Gtk.IconSize.LARGE_TOOLBAR));
+                caution.add(new Gtk.Label(
+                    "This module does not support file deletion"));
                 controls.add(caution);
             }
             var size_group = new Gtk.SizeGroup(Gtk.SizeGroupMode.HORIZONTAL);
@@ -68,9 +71,11 @@ namespace Valhalla.Widgets {
                 if (module.settings[pref.key] != null)
                     pref.write(module.settings[pref.key]);
                 if (pref.default != null)
-                    (module.settings as Config.MutableSettings).set_default(pref.key, pref.default);
+                    ((Config.MutableSettings) module.settings)
+                        .set_default(pref.key, (!) pref.default);
                 pref.change_notify.connect(() => {
-                    (module.settings as Config.MutableSettings)[pref.key] = pref.read();
+                    ((Config.MutableSettings) module.settings)[pref.key] =
+                        pref.read();
                 });
                 controls.add(pref);
             }
@@ -79,12 +84,12 @@ namespace Valhalla.Widgets {
 
         construct {
             var i = 0;
-            foreach (var module in Modules.get_modules()) {
+            foreach (var module in get_app().modules) {
                 modules.add(new ListRow(module));
-                if (module.name == Config.settings["module"]) {
+                if (module == get_app().modules.get_active_module())
                     modules.select_row(modules.get_row_at_index(i));
-                }
-                i++;
+                else
+                    i++;
             }
         }
     }

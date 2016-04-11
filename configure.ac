@@ -14,25 +14,27 @@ dnl Dependencies
 dnl ###########################################################################
 
 GLIB_REQUIRED=2.40.0
-GOBJ_REQUIRED=2.0.0
-GIO_REQUIRED=2.0.0
+GTK_REQUIRED=3.20
 AC_SUBST([GLIB_REQUIRED])
 
 PKG_CHECK_MODULES(valhalla_U, [
   glib-2.0 >= $GLIB_REQUIRED
-  gobject-2.0 >= $GOBJ_REQUIRED
-  gio-2.0 >= $GIO_REQUIRED
+  gobject-2.0 >= $GLIB_REQUIRED
+  gio-2.0 >= $GLIB_REQUIRED
+  gio-unix-2.0 >= $GLIB_REQUIRED
+  gtk+-3.0 >= $GTK_REQUIRED
   gmodule-2.0
-  gtk+-3.0
   gee-0.8
   sqlite3
-  libnotify
   zlib
   libsoup-2.4
   libnautilus-extension
 ])
 
-AC_SUBST([valhalla_U_VALAFLAGS], [--target-glib=$GLIB_REQUIRED])
+AC_SUBST([valhalla_U_VALAFLAGS], ["--vapidir=\$(top_srcdir)/vapi \
+          --target-glib=$GLIB_REQUIRED \
+          --fatal-warnings \
+          --enable-experimental-non-null"])
 
 AC_PATH_PROG(GLIB_COMPILE_RESOURCES, glib-compile-resources)
 

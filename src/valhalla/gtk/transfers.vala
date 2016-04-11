@@ -68,15 +68,13 @@ namespace Valhalla.Widgets {
             dummy.file_type = this.file_type;
             dummy.local_filename = this.local_filename;
             dummy.crc32 = this.crc32;
-            Thumbnailer.get_thumbnail.begin(dummy, (obj, res) => {
-                Thumbnailer.get_thumbnail.end(res);
-            });
+            get_app().thumbnailer.get_thumbnail.begin(dummy);
         }
 
-        public TransferWidget.from_path(owned string path) {
+        public TransferWidget.from_path(owned string path) throws GLib.Error {
             Object();
 
-            db = (Application.get_default() as valhalla).database;
+            db = get_app().database;
             this.completed.connect(() => {
                 db.commit_transfer(this);
             });
@@ -84,11 +82,25 @@ namespace Valhalla.Widgets {
             if (path.has_prefix("file://"))
                 path = path[7:path.length];
 
-            this.init_for_path(path);
+            var file = File.new_for_path(path);
+            uint8[] tmp;
+            file.load_contents(null, out tmp, null);
+
+            file_contents = tmp;
+            timestamp = Time.gm(time_t());
+            file_name = Path.get_basename(path);
+            file_type = ContentType.guess(path, tmp, null);
+
+            cancellable = new Cancellable();
             crc32 = "%08x".printf(
                 (uint) ZLib.Utility.adler32(1, file_contents));
             local_filename = path;
-            module_name = Config.settings["module"];
+
+            var _module_name = get_app()
+                .settings_context.app_settings["module"];
+            if (_module_name == null)
+                throw new Error.CONFIG_ERROR("Please configure a module in %s",
+                    "the preferences panel");
 
             file_name_label.label = file_name;
             this.bind_property("status", progress_bar, "text");
@@ -96,8 +108,13 @@ namespace Valhalla.Widgets {
             progress_bar.pulse();
 
             copy_button.clicked.connect(() => {
-                var clipboard = Gtk.Clipboard.get_default(
-                    Gdk.Display.get_default());
+                var display = Gdk.Display.get_default();
+                if (display == null) {
+                    get_main_window().stack_notify(
+                        "Failed to copy URL to clipboard");
+                    return;
+                }
+                var clipboard = Gtk.Clipboard.get_default((!) display);
                 clipboard.set_text(remote_path, remote_path.length);
                 get_main_window().stack_notify("URL copied to clipboard");
             });
@@ -130,9 +147,10 @@ namespace Valhalla.Widgets {
                 pulse = false;
                 status = "Upload failed";
                 progress_bar.fraction = 0;
-                new Notify.Notification("Upload failed",
-                    Path.get_basename(local_filename),
-                    "document-send-symbolic").show();
+                var notification = new Notification("Upload failed");
+                notification.set_icon(new ThemedIcon("document-send-symbolic"));
+                notification.set_body(Path.get_basename(local_filename));
+                get_app().send_notification("upload-failed", notification);
             });
             this.cancellable.connect((_) => {
                 pulse = false;
@@ -144,8 +162,10 @@ namespace Valhalla.Widgets {
                 copy_button.sensitive = true;
                 status = "Done!";
                 progress_bar.fraction = 1;
-                new Notify.Notification("Upload complete",
-                    remote_path, "document-send-symbolic").show();
+                var notification = new Notification("Upload complete");
+                notification.set_icon(new ThemedIcon("document-send-symbolic"));
+                notification.set_body(remote_path);
+                get_app().send_notification("upload-complete", notification);
             });
 
             if (!db.unique_hash(crc32))
@@ -175,8 +195,8 @@ namespace Valhalla.Widgets {
 
         public void clear() {
             listbox.foreach((row) => {
-                var transfer = (row as Gtk.ListBoxRow).get_child()
-                    as TransferWidget;
+                var transfer =
+                    (TransferWidget) ((Gtk.ListBoxRow) row).get_child();
                 if (transfer.status == "Done!" ||
                         transfer.status == "Upload failed" ||
                         transfer.status == "Cancelled")
@@ -187,9 +207,12 @@ namespace Valhalla.Widgets {
         construct {
             listbox = new Gtk.ListBox();
             listbox.row_activated.connect((row) => {
-                var transfer = row.get_child() as TransferWidget;
+                var transfer = (TransferWidget) row.get_child();
                 if (transfer.status == "Done!")
-                    AppInfo.launch_default_for_uri(transfer.remote_path, null);
+                    try {
+                        AppInfo.launch_default_for_uri(transfer.remote_path,
+                            null);
+                    } catch {}
             });
             listbox.selection_mode = Gtk.SelectionMode.NONE;
             listbox.activate_on_single_click = true;
