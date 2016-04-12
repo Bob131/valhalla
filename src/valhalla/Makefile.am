@@ -73,3 +73,15 @@ libnautilus_valhalla_la_LIBADD = $(valhalla_U_LIBS)
 nautilus-extension.c:
 	$(AM_V_VALAC) $(VALAC) $(libnautilus_valhalla_la_VALAFLAGS) -C nautilus-extension.vala && \
 	$(SED) -i "s/(GType\*\* types/(const GType\*\* types/" nautilus-extension.c
+
+CLEANFILES = \
+	$(valhalla_SOURCES:%.vala=%.c) \
+	*.stamp \
+	$(valhalla_screenshot_SOURCES:%.vala=%.c)
+
+EXTRA_DIST = \
+	gresources.xml \
+	gtk/*.ui
+
+dist-hook:
+	cd $(distdir); rm -f $(CLEANFILES)

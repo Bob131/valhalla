@@ -25,3 +25,10 @@ libvalhalla_la_CFLAGS = \
 
 libvalhalla_la_LIBADD = \
 	$(valhalla_U_LIBS)
+
+CLEANFILES = \
+	$(libvalhalla_la_SOURCES:%.vala=%.c) \
+	*.stamp
+
+dist-hook:
+	cd $(distdir); rm -f $(CLEANFILES)

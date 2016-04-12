@@ -27,3 +27,10 @@ fuse_la_VALAFLAGS = \
 fuse_la_CFLAGS = $(common_cflags)
 fuse_la_LIBADD = $(common_libadd)
 fuse_la_LDFLAGS = $(common_ldflags)
+
+CLEANFILES = \
+	$(fuse_la_SOURCES:%.vala=%.c) \
+	*.stamp
+
+dist-hook:
+	cd $(distdir); rm -f $(CLEANFILES)
