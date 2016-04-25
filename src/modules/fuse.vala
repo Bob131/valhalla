@@ -198,6 +198,7 @@ public class Fuse : Object, Modules.BaseModule {
             }
             file.progress(offset+frame_length);
             if (file.cancellable.is_cancelled()) {
+                success = false;
                 break;
             }
         }

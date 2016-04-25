@@ -32,7 +32,15 @@ namespace Valhalla.Widgets {
 
         public signal void failed();
 
-        private Gtk.ResponseType file_exists(string message) {
+        private Database.RemoteFile get_offender() {
+            var files = db.query(true, crc32: crc32);
+            if (files.length == 0)
+                files = db.query(true, remote_path: _remote_path);
+            assert (files.length > 0);
+            return files[0];
+        }
+
+        private bool overwrite_file(string message) {
             var dialog = new Gtk.MessageDialog(get_main_window(),
                 Gtk.DialogFlags.MODAL, Gtk.MessageType.QUESTION,
                 Gtk.ButtonsType.NONE, "%s", message); // avoid failing when
@@ -43,13 +51,13 @@ namespace Valhalla.Widgets {
             dialog.add_button("Overwrite", Gtk.ResponseType.YES);
             var ret = dialog.run();
             dialog.destroy();
-            if (ret == Gtk.ResponseType.NO) {
-                var files = db.query(true, crc32: crc32);
-                if (files.length == 0)
-                    files = db.query(true, remote_path: _remote_path);
-                get_main_window().file_window.display_file(files[0]);
+            if (ret == Gtk.ResponseType.YES) {
+                get_offender().remove_from_database();
+                return true;
+            } else if (ret == Gtk.ResponseType.NO) {
+                get_main_window().file_window.display_file(get_offender());
             }
-            return (Gtk.ResponseType) ret;
+            return false;
         }
 
         public void set_remote_path(string path) throws Valhalla.Error {
@@ -58,8 +66,7 @@ namespace Valhalla.Widgets {
                     @"URL $(path) is invalid");
             _remote_path = path;
             if (!db.unique_url(path))
-                if (file_exists(@"A file with the URL $path already exists")
-                        != Gtk.ResponseType.YES)
+                if (!overwrite_file(@"A file with the URL $path already exists"))
                     throw new Valhalla.Error.CANCELLED("");
 
             // generate thumbnail now
@@ -169,7 +176,7 @@ namespace Valhalla.Widgets {
             });
 
             if (!db.unique_hash(crc32))
-                if (file_exists(@"A file with hash $crc32 appears to have already been uploaded") != Gtk.ResponseType.YES)
+                if (!overwrite_file(@"A file with hash $crc32 appears to have already been uploaded"))
                     cancellable.cancel();
 
             this.show_all();
