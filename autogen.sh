@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 _openbsd_acenv_set() {
     [ -z ${AUTOCONF_VERSION:-} ] || return 0
     export AUTOCONF_VERSION
@@ -27,6 +29,7 @@ set -e
 srcdir=`dirname $0`
 test -z "$srcdir" && srcdir=.
 
+mkdir m4
 aclocal -I m4 --install
 cp libgd/libgd.m4 m4
 autoreconf --force --install
