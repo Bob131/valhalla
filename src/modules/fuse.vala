@@ -1,4 +1,5 @@
 using Valhalla;
+using Valhalla.Modules;
 
 class BaseEntry : Gtk.Entry {
     public string read() {
@@ -39,7 +40,7 @@ interface MountData : Object {
     public abstract string path {construct; get;}
 }
 
-class MountMan : Object {
+class Valhalla.Modules.MountMan : Object {
     [CCode (has_target = false)]
     private delegate void DestroyCallback(MountMan parent, string umount_cmd,
                                           string path);
@@ -79,8 +80,7 @@ class MountMan : Object {
         mount_in_progress = false;
     }
 
-    public async MountData create(Config.Settings settings)
-            throws Valhalla.Error {
+    public async MountData create(Config.Settings settings) throws Error {
         var path = Path.build_filename(Environment.get_tmp_dir(),
             "valhalla_mount");
         DirUtils.create(path, 0700);
@@ -105,7 +105,7 @@ class MountMan : Object {
                 p = new Subprocess.newv({"/bin/sh", "-c", mount_cmd},
                     SubprocessFlags.STDOUT_PIPE|SubprocessFlags.STDERR_PIPE);
             } catch (GLib.Error e) {
-                throw new Valhalla.Error.MODULE_ERROR(e.message);
+                throw new Error.GENERIC_ERROR(e.message);
             }
             try {
                 yield p.wait_check_async(null);
@@ -121,7 +121,7 @@ class MountMan : Object {
                     if (stderr_data.length == 0)
                         stderr_data = e.message;
                 }
-                throw new Valhalla.Error.MODULE_ERROR(stderr_data);
+                throw new Error.GENERIC_ERROR(stderr_data);
             }
         }
         mount_in_progress = false;
@@ -137,7 +137,7 @@ class MountMan : Object {
     }
 }
 
-public class Fuse : Object, Modules.BaseModule {
+public class Valhalla.Modules.Fuse : Object, BaseModule {
     public string name {get {return "fuse";}}
     public string pretty_name {get {return "FuseFS";}}
     public string description {get {
@@ -154,9 +154,9 @@ public class Fuse : Object, Modules.BaseModule {
     }
 
     public bool implements_delete {get {return true;}}
-    public async void @delete(string remote_path) throws Valhalla.Error {
+    public async void @delete(string remote_path) throws Error {
         if (!remote_path.has_prefix((!) settings["serve-url"]))
-            throw new Valhalla.Error.MODULE_ERROR("Invalid remote path");
+            throw new Error.GENERIC_ERROR("Invalid remote path");
         var filename = remote_path[
             ((!) settings["serve-url"]).length:remote_path.length];
         filename = filename.replace("/", "");
@@ -168,10 +168,16 @@ public class Fuse : Object, Modules.BaseModule {
         }
     }
 
-    public async void upload(Transfer file) throws Valhalla.Error {
-        var dest_filename = @"$(file.crc32)$(file.guess_extension())";
-        file.set_remote_path(Path.build_filename((!) settings["serve-url"],
-            dest_filename));
+    public async void upload(Data.Transfer transfer) throws Error {
+        var file = transfer.file;
+        var dest_filename = @"$((!) file.crc32)$(file.guess_extension())";
+
+        try {
+            transfer.set_remote_path(Path.build_filename(
+                (!) settings["serve-url"], dest_filename));
+        } catch {
+            return;
+        }
 
         var mount = yield mounter.create(settings);
 
@@ -182,7 +188,7 @@ public class Fuse : Object, Modules.BaseModule {
             stream = yield dest_file.replace_readwrite_async(null, false,
                 FileCreateFlags.REPLACE_DESTINATION);
         } catch (GLib.Error e) {
-            throw new Valhalla.Error.MODULE_ERROR(e.message);
+            throw new Error.GENERIC_ERROR(e.message);
         }
         bool success = true;
         for (var i = 0; i <= file.file_contents.length/1024; i++) {
@@ -194,10 +200,10 @@ public class Fuse : Object, Modules.BaseModule {
                 yield stream.output_stream.write_async(
                     file.file_contents[offset:offset+frame_length]);
             } catch (IOError e) {
-                throw new Valhalla.Error.MODULE_ERROR(e.message);
+                throw new Error.GENERIC_ERROR(e.message);
             }
-            file.progress(offset+frame_length);
-            if (file.cancellable.is_cancelled()) {
+            transfer.progress(offset+frame_length);
+            if (transfer.cancellable.is_cancelled()) {
                 success = false;
                 break;
             }
@@ -208,13 +214,13 @@ public class Fuse : Object, Modules.BaseModule {
         } catch (IOError e) {} // it should be safe to ignore this
 
         if (success)
-            file.completed();
+            transfer.completed();
         else
             try {
                 yield dest_file.delete_async();
             } catch (GLib.Error e) {
-                throw new Valhalla.Error.MODULE_ERROR(
-                    @"Failed to cancel upload: $(e.message)");
+                throw new Error.GENERIC_ERROR("Failed to cancel upload: %s",
+                    e.message);
             }
     }
 }

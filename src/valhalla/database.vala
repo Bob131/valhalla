@@ -1,12 +1,30 @@
-namespace Valhalla.Database {
-    public class RemoteFile : Object {
-        public Time? timestamp {set; get; default=null;}
-        public string? crc32 {set; get; default=null;}
-        public string? local_filename {set; get; default=null;}
-        public string file_type {set; get; default="application/octect-stream";}
+namespace Valhalla.Data {
+    public abstract class RemoteFile : BaseFile {
+        public override Time? timestamp {set; get; default=null;}
+        public override string? crc32 {set; get; default=null;}
+        public override string file_type {set; get;
+            default="application/octet-stream";}
+
+        // satisfy Vala's property override rules
+        public string _remote_path {set; get;}
+        public override string remote_path {get {return _remote_path;}}
+
+        public string? local_path {set; get; default=null;}
         public uint64? file_size {set; get; default=null;}
-        public string remote_path {set; get;}
         public string? module_name {set; get; default=null;}
+    }
+}
+
+
+namespace Valhalla.Database {
+    public interface SettableRemoteFile : Data.RemoteFile {
+        public abstract string remote_path {set; get;}
+    }
+
+    public class RemoteFile : Data.RemoteFile {
+        public override Time? timestamp {set; get; default=null;}
+        public override string? crc32 {set; get; default=null;}
+        public override string file_type {set; get; default="application/octect-stream";}
 
         public Modules.BaseModule? module {owned get {
             if (module_name == null)
@@ -16,7 +34,7 @@ namespace Valhalla.Database {
         }}
 
         public string display_name {owned get {
-            return Path.get_basename((!) (local_filename ?? remote_path));
+            return Path.get_basename((!) (local_path ?? remote_path));
         }}
 
         private Database db;
@@ -51,6 +69,8 @@ namespace Valhalla.Database {
                     this.timestamp = Time.gm((time_t) uint64.parse((!) val));
                 else if (col == "file_size")
                     this.file_size = uint64.parse((!) val);
+                else if (col == "remote_path")
+                    this._remote_path = (!) val;
                 else
                     this[col] = (!) val;
             }
@@ -114,7 +134,7 @@ namespace Valhalla.Database {
             });
             for (var i = 0; stmt.step() == Sqlite.ROW; i++) {
                 var file = new RemoteFile.build_from_statement(this, stmt, i);
-                file.remove_from_database.connect(() => {delete_file(file);});
+                file.remove_from_database.connect(() => {@delete(file);});
                 files.prepend_val(file); // prepend so that they're sorted by
                                          // ascending age
             }
@@ -125,7 +145,7 @@ namespace Valhalla.Database {
 
         public signal void committed();
 
-        private void delete_file(RemoteFile file) {
+        private void @delete(RemoteFile file) {
             ((valhalla) Application.get_default()).thumbnailer
                 .delete_thumbnail(file);
             Sqlite.Statement stmt;
@@ -136,27 +156,48 @@ namespace Valhalla.Database {
             assert (stmt.step() == Sqlite.DONE);
         }
 
-        public void commit_transfer(Widgets.TransferWidget file) {
+        public void commit(Data.RemoteFile file) {
             Sqlite.Statement stmt;
-            db.prepare_v2("""INSERT OR REPLACE INTO Files
-                                (timestamp, crc32, local_filename, file_type,
-                                 file_size, remote_path, module_name)
-                             VALUES ($timestamp, $crc32, $local_filename,
-                                     $file_type, $file_size, $remote_path,
-                                     $module_name)""", -1, out stmt);
-            stmt.bind_text(stmt.bind_parameter_index("$timestamp"),
-                ((uint64) file.timestamp.mktime()).to_string());
-            stmt.bind_text(stmt.bind_parameter_index("$crc32"), file.crc32);
-            stmt.bind_text(stmt.bind_parameter_index("$local_filename"),
-                file.local_filename);
+
+            string?[] fields = {"file_type", "remote_path"};
+            if (file.timestamp != null)
+                fields += "timestamp";
+            if (file.crc32 != null)
+                fields += "crc32";
+            if (file.local_path != null)
+                fields += "local_path";
+            if (file.file_size != null)
+                fields += "file_size";
+            if (file.module_name != null)
+                fields += "module_name";
+
+            var sql = "INSERT OR REPLACE INTO Files (%s) VALUES (%s)".printf(
+                string.joinv(",", fields),
+                "$%s".printf(string.joinv(",$", fields)));
+            message(sql);
+
+            db.prepare_v2(sql, -1, out stmt);
+
             stmt.bind_text(stmt.bind_parameter_index("$file_type"),
                 file.file_type);
-            stmt.bind_text(stmt.bind_parameter_index("$file_size"),
-                file.file_size.to_string());
             stmt.bind_text(stmt.bind_parameter_index("$remote_path"),
                 file.remote_path);
-            stmt.bind_text(stmt.bind_parameter_index("$module_name"),
-                file.module_name);
+
+            if ("timestamp" in fields)
+                stmt.bind_text(stmt.bind_parameter_index("$timestamp"),
+                    ((uint64) ((!) file.timestamp).mktime()).to_string());
+            if ("crc32" in fields)
+                stmt.bind_text(stmt.bind_parameter_index("$crc32"), file.crc32);
+            if ("local_path" in fields)
+                stmt.bind_text(stmt.bind_parameter_index("$local_path"),
+                    file.local_path);
+            if ("file_size" in fields)
+                stmt.bind_text(stmt.bind_parameter_index("$file_size"),
+                    ((!) file.file_size).to_string());
+            if ("module_name" in fields)
+                stmt.bind_text(stmt.bind_parameter_index("$module_name"),
+                    file.module_name);
+
             assert (stmt.step() == Sqlite.DONE);
         }
 
@@ -165,7 +206,7 @@ namespace Valhalla.Database {
             db.exec("""CREATE TABLE IF NOT EXISTS Files (
                             timestamp STRING DEFAULT CURRENT_TIMESTAMP,
                             crc32 STRING,
-                            local_filename STRING,
+                            local_path STRING,
                             file_type STRING,
                             file_size STRING,
                             remote_path STRING UNIQUE NOT NULL ON CONFLICT FAIL,

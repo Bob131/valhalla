@@ -1,20 +1,44 @@
+namespace Valhalla.Data {
+    public class RealTransferFile : RemoteFile, TransferFile {
+        public string file_name {set; get;}
+        public uint8[] file_contents {set; get;}
+
+        public RealTransferFile(owned string path) throws GLib.Error {
+            Object();
+
+            if (path.has_prefix("file://"))
+                path = path[7:path.length];
+
+            var file = File.new_for_path(path);
+            uint8[] tmp;
+            file.load_contents(null, out tmp, null);
+
+            file_contents = tmp;
+            local_path = path;
+            file_size = file_contents.length;
+            timestamp = Time.gm(time_t());
+            file_name = Path.get_basename(path);
+            file_type = ContentType.guess(path, tmp, null);
+
+            crc32 = "%08x".printf(
+                (uint) ZLib.Utility.adler32(1, file_contents));
+
+            var _module_name = Widgets.get_app()
+                .settings_context.app_settings["module"];
+            if (_module_name == null)
+                throw new Config.Error.KEY_NOT_SET("Please configure a %s",
+                    "module in the preferences panel");
+        }
+    }
+}
+
 namespace Valhalla.Widgets {
     [GtkTemplate (ui = "/so/bob131/valhalla/gtk/transfers.ui")]
-    public class TransferWidget : Gtk.Box, Transfer {
-        private string _remote_path;
-
-        public Time timestamp {protected set; get;}
-        public string crc32 {protected set; get;}
-        public string file_name {protected set; get;}
-        public uint8[] file_contents {protected set; get;}
-        public string file_type {protected set; get;}
-        public uint64 file_size {get {
-            return file_contents.length;
+    public class TransferWidget : Data.Transfer, Gtk.Box {
+        public Data.TransferFile file {protected set; get;}
+        private Data.RealTransferFile real_file {get {
+            return (Data.RealTransferFile) file;
         }}
-
-        public string local_filename {set; get;}
-        public string remote_path {get {return _remote_path;}}
-        public string module_name {set; get;}
 
         public Cancellable cancellable {protected set; get;}
         public string status {private set; get;}
@@ -33,9 +57,9 @@ namespace Valhalla.Widgets {
         public signal void failed();
 
         private Database.RemoteFile get_offender() {
-            var files = db.query(true, crc32: crc32);
+            var files = db.query(true, crc32: real_file.crc32);
             if (files.length == 0)
-                files = db.query(true, remote_path: _remote_path);
+                files = db.query(true, remote_path: real_file.remote_path);
             assert (files.length > 0);
             return files[0];
         }
@@ -60,22 +84,18 @@ namespace Valhalla.Widgets {
             return false;
         }
 
-        public void set_remote_path(string path) throws Valhalla.Error {
+        public void set_remote_path(string path) throws Data.Error {
             if (Uri.parse_scheme(path) == null)
-                throw new Valhalla.Error.INVALID_REMOTE_PATH(
-                    @"URL $(path) is invalid");
-            _remote_path = path;
+                throw new Data.Error.INVALID_REMOTE_PATH("URL %s is invalid",
+                    path);
+            real_file._remote_path = path;
             if (!db.unique_url(path))
-                if (!overwrite_file(@"A file with the URL $path already exists"))
-                    throw new Valhalla.Error.CANCELLED("");
-
+                if (!overwrite_file(@"A file with the URL $path already exists")) {
+                    this.cancellable.cancel();
+                    throw new Data.Error.TRANSFER_CANCELLED("");
+                }
             // generate thumbnail now
-            var dummy = new Database.RemoteFile();
-            dummy.remote_path = path;
-            dummy.file_type = this.file_type;
-            dummy.local_filename = this.local_filename;
-            dummy.crc32 = this.crc32;
-            get_app().thumbnailer.get_thumbnail.begin(dummy);
+            get_app().thumbnailer.get_thumbnail.begin(real_file);
         }
 
         public TransferWidget.from_path(owned string path) throws GLib.Error {
@@ -83,33 +103,12 @@ namespace Valhalla.Widgets {
 
             db = get_app().database;
             this.completed.connect(() => {
-                db.commit_transfer(this);
+                db.commit(real_file);
             });
 
-            if (path.has_prefix("file://"))
-                path = path[7:path.length];
-
-            var file = File.new_for_path(path);
-            uint8[] tmp;
-            file.load_contents(null, out tmp, null);
-
-            file_contents = tmp;
-            timestamp = Time.gm(time_t());
-            file_name = Path.get_basename(path);
-            file_type = ContentType.guess(path, tmp, null);
-
             cancellable = new Cancellable();
-            crc32 = "%08x".printf(
-                (uint) ZLib.Utility.adler32(1, file_contents));
-            local_filename = path;
 
-            var _module_name = get_app()
-                .settings_context.app_settings["module"];
-            if (_module_name == null)
-                throw new Error.CONFIG_ERROR("Please configure a module in %s",
-                    "the preferences panel");
-
-            file_name_label.label = file_name;
+            file_name_label.label = file.file_name;
             this.bind_property("status", progress_bar, "text");
             status = "Initializing...";
             progress_bar.pulse();
@@ -122,7 +121,8 @@ namespace Valhalla.Widgets {
                     return;
                 }
                 var clipboard = Gtk.Clipboard.get_default((!) display);
-                clipboard.set_text(remote_path, remote_path.length);
+                clipboard.set_text(real_file.remote_path,
+                    real_file.remote_path.length);
                 get_main_window().stack_notify("URL copied to clipboard");
             });
             cancel_button.clicked.connect(() => {
@@ -146,7 +146,7 @@ namespace Valhalla.Widgets {
                 pulse = false;
                 if (this.cancellable.is_cancelled())
                     return;
-                double fraction = (double) bytes / file_contents.length;
+                double fraction = (double) bytes / file.file_contents.length;
                 status = @"$(Math.floor(fraction*100))%";
                 progress_bar.fraction = fraction;
             });
@@ -156,7 +156,8 @@ namespace Valhalla.Widgets {
                 progress_bar.fraction = 0;
                 var notification = new Notification("Upload failed");
                 notification.set_icon(new ThemedIcon("document-send-symbolic"));
-                notification.set_body(Path.get_basename(local_filename));
+                notification.set_body(Path.get_basename(
+                    (!) real_file.local_path));
                 get_app().send_notification("upload-failed", notification);
             });
             this.cancellable.connect((_) => {
@@ -171,12 +172,12 @@ namespace Valhalla.Widgets {
                 progress_bar.fraction = 1;
                 var notification = new Notification("Upload complete");
                 notification.set_icon(new ThemedIcon("document-send-symbolic"));
-                notification.set_body(remote_path);
+                notification.set_body(real_file.remote_path);
                 get_app().send_notification("upload-complete", notification);
             });
 
-            if (!db.unique_hash(crc32))
-                if (!overwrite_file(@"A file with hash $crc32 appears to have already been uploaded"))
+            if (!db.unique_hash((!) file.crc32))
+                if (!overwrite_file(@"A file with hash $((!) file.crc32) appears to have already been uploaded"))
                     cancellable.cancel();
 
             this.show_all();
@@ -217,8 +218,8 @@ namespace Valhalla.Widgets {
                 var transfer = (TransferWidget) row.get_child();
                 if (transfer.status == "Done!")
                     try {
-                        AppInfo.launch_default_for_uri(transfer.remote_path,
-                            null);
+                        AppInfo.launch_default_for_uri(
+                            transfer.file.remote_path, null);
                     } catch {}
             });
             listbox.selection_mode = Gtk.SelectionMode.NONE;

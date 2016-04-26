@@ -4,7 +4,7 @@ class Valhalla.Thumbnailer : Object {
     private Gee.HashMap<string, string> mime_lookup =
         new Gee.HashMap<string, string>();
 
-    private string build_path(Database.RemoteFile file) {
+    private string build_path(Data.RemoteFile file) {
         var path_hash = Checksum.compute_for_string(ChecksumType.MD5,
             file.remote_path);
         var cache_dir = Path.build_filename(Environment.get_user_cache_dir(),
@@ -13,16 +13,16 @@ class Valhalla.Thumbnailer : Object {
         return Path.build_filename(cache_dir, @"$(path_hash).png");
     }
 
-    public void delete_thumbnail(Database.RemoteFile file) {
+    public void delete_thumbnail(Data.RemoteFile file) {
         var path = build_path(file);
         if (FileUtils.test(path, FileTest.EXISTS))
             FileUtils.unlink(path);
     }
 
-    private async Gdk.Pixbuf? create_thumbnail(Database.RemoteFile file,
+    private async Gdk.Pixbuf? create_thumbnail(Data.RemoteFile file,
                                                string? path = null) {
         if (path == null)
-            path = file.local_filename;
+            path = file.local_path;
         var thumbnail_path = build_path(file);
         uint8[] file_contents;
         try {
@@ -63,7 +63,7 @@ class Valhalla.Thumbnailer : Object {
         return null;
     }
 
-    public async Gdk.Pixbuf? get_thumbnail(Database.RemoteFile file) {
+    public async Gdk.Pixbuf? get_thumbnail(Data.RemoteFile file) {
         var thumbnail_path = build_path(file);
         if (FileUtils.test(thumbnail_path, FileTest.EXISTS))
             try {
@@ -72,8 +72,8 @@ class Valhalla.Thumbnailer : Object {
         if (!mime_lookup.has_key(file.file_type) &&
                 !file.file_type.has_prefix("image/"))
             return null;
-        else if (file.local_filename != null &&
-                FileUtils.test((!) file.local_filename, FileTest.EXISTS)) {
+        else if (file.local_path != null &&
+                FileUtils.test((!) file.local_path, FileTest.EXISTS)) {
             return yield create_thumbnail(file);
         } else {
             FileIOStream fstream;

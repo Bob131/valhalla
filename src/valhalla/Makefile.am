@@ -74,10 +74,12 @@ nautilus-extension.c:
 	$(AM_V_VALAC) $(VALAC) $(libnautilus_valhalla_la_VALAFLAGS) -C nautilus-extension.vala && \
 	$(SED) -i "s/(GType\*\* types/(const GType\*\* types/" nautilus-extension.c
 
+
 CLEANFILES = \
 	$(valhalla_SOURCES:%.vala=%.c) \
-	*.stamp \
-	$(valhalla_screenshot_SOURCES:%.vala=%.c)
+	$(valhalla_screenshot_SOURCES:%.vala=%.c) \
+	$(libnautilus_valhalla_la_SOURCES) \
+	*.stamp
 
 EXTRA_DIST = \
 	gresources.xml \

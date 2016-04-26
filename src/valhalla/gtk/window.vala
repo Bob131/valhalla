@@ -111,13 +111,9 @@ namespace Valhalla.Widgets {
             transfers.add(transfer);
             try {
                 yield ((!) module).upload(transfer);
-            } catch (Valhalla.Error e) {
-                if (e is Valhalla.Error.CANCELLED)
-                    transfer.cancellable.cancel();
-                else {
-                    transfer.failed();
-                    display_error(e.message);
-                }
+            } catch (Modules.Error e) {
+                transfer.failed();
+                display_error(e.message);
             }
         }
 

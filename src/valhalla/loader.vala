@@ -1,8 +1,15 @@
 namespace Valhalla.Modules {
+    // provided by autotools; typically points to /usr/lib64/valhalla
+    private extern const string MODULEDIR;
+
     public class Loader : Object {
+        public Config.SettingsContext settings {construct; private get;}
         private Gee.HashMap<string, BaseModule> modules =
             new Gee.HashMap<string, BaseModule>();
-        public Config.SettingsContext settings {construct; private get;}
+        private string[] paths {owned get {
+            return {Path.build_filename(Environment.get_user_data_dir(),
+                "valhalla"), MODULEDIR};
+        }}
 
         public BaseModule? get_active_module() {
             var module_name = settings.app_settings["module"];
@@ -27,7 +34,7 @@ namespace Valhalla.Modules {
             if (!Module.supported())
                 error("Modules aren't supported on this system");
 
-            foreach (var path in get_paths()) {
+            foreach (var path in paths) {
                 Dir dir;
                 try {
                     dir = Dir.open(path);

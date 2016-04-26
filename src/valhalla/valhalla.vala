@@ -13,7 +13,6 @@ public class DBusHooks : Object {
 // TODO:
 // * module index functionality
 // * about dialog
-// * move all non-UI-specific code into separate lib for alternate UIs
 class valhalla : Gtk.Application {
     public Widgets.Window? window {private set; get; default = null;}
     public Database.Database database {construct; get;}
