@@ -1,7 +1,6 @@
 using Valhalla;
-using Valhalla.Modules;
 
-class MountCommand : Object, Preferences.Preference {
+class MountCommand : Object, Module.Preference {
     public string? @default {get {
         return "sshfs example.com:/var/www/shared $f -C -o sshfs_sync";}}
     public string? pretty_name {get {return "Mount command";}}
@@ -11,7 +10,7 @@ class MountCommand : Object, Preferences.Preference {
     public string? @value {set; get;}
 }
 
-class ServeURL : Object, Preferences.Preference {
+class ServeURL : Object, Module.Preference {
     public string? @default {get {return "https://shared.example.com";}}
     public string? pretty_name {get {return "Serve URL";}}
     public string? help_text {get {
@@ -23,7 +22,7 @@ interface MountData : Object {
     public abstract string path {construct; get;}
 }
 
-class Valhalla.Modules.MountMan : Object {
+class MountMan : Object {
     [CCode (has_target = false)]
     private delegate void DestroyCallback(MountMan parent, string umount_cmd,
                                           string path);
@@ -63,19 +62,17 @@ class Valhalla.Modules.MountMan : Object {
         mount_in_progress = false;
     }
 
-    public async MountData create(Preferences.Context prefs) throws Error {
+    public async MountData create(string? mount_command) throws Module.Error {
         var path = Path.build_filename(Environment.get_tmp_dir(),
             "valhalla_mount");
         DirUtils.create(path, 0700);
 
-        var mount_cmd_pref = prefs[typeof(MountCommand)];
-        if (mount_cmd_pref.value == null)
-            throw new Error.GENERIC_ERROR(
+        if (mount_command == null)
+            throw new Module.Error.GENERIC_ERROR(
                 "Please set a mount command in the preferences panel");
 
         var umount_cmd = "fusermount -u %s".printf(Shell.quote(path));
-        var mount_cmd = ((!) mount_cmd_pref.value).replace("$f",
-            Shell.quote(path));
+        var mount_cmd = ((!) mount_command).replace("$f", Shell.quote(path));
 
         yield wait_on_mount();
         AtomicInt.add(ref mounts, 1);
@@ -92,8 +89,8 @@ class Valhalla.Modules.MountMan : Object {
             try {
                 p = new Subprocess.newv({"/bin/sh", "-c", mount_cmd},
                     SubprocessFlags.STDOUT_PIPE|SubprocessFlags.STDERR_PIPE);
-            } catch (GLib.Error e) {
-                throw new Error.GENERIC_ERROR(e.message);
+            } catch (Error e) {
+                throw new Module.Error.GENERIC_ERROR(e.message);
             }
             try {
                 yield p.wait_check_async(null);
@@ -109,7 +106,7 @@ class Valhalla.Modules.MountMan : Object {
                     if (stderr_data.length == 0)
                         stderr_data = e.message;
                 }
-                throw new Error.GENERIC_ERROR(stderr_data);
+                throw new Module.Error.GENERIC_ERROR(stderr_data);
             }
         }
         mount_in_progress = false;
@@ -125,22 +122,23 @@ class Valhalla.Modules.MountMan : Object {
     }
 }
 
-public class Valhalla.Modules.Fuse : Object, BaseModule {
-    public string pretty_name {get {return "FuseFS";}}
-    public string description {get {
+public class Fuse : Module.Uploader {
+    public override string pretty_name {get {return "FuseFS";}}
+    public override string description {get {
         return "Mounts and copies to a\nfuse filesystem";}}
-    public Preferences.Context preferences {construct; get;}
 
     private MountMan mounter = new MountMan();
+    private Module.Preference mount_command;
+    private Module.Preference serve_url;
 
-    public bool implements_delete {get {return true;}}
-    public async void @delete(string remote_path) throws Error {
-        var configured_url = (!) preferences[typeof(ServeURL)].value;
-        if (!remote_path.has_prefix(configured_url))
-            throw new Error.GENERIC_ERROR("Invalid remote path");
-        var filename = remote_path[configured_url.length:remote_path.length];
+    public override bool implements_delete {get {return true;}}
+    public override async void @delete(string remote_path) throws Module.Error {
+        if (!remote_path.has_prefix((!) serve_url.value))
+            throw new Module.Error.GENERIC_ERROR("Invalid remote path");
+        var filename =
+            remote_path[((!) serve_url.value).length:remote_path.length];
         filename = filename.replace("/", "");
-        var mount = yield mounter.create(preferences);
+        var mount = yield mounter.create(mount_command.value);
         var path = Path.build_filename(mount.path, filename);
         if (FileUtils.test(path, FileTest.EXISTS)) {
             var file = File.new_for_path(path);
@@ -148,18 +146,20 @@ public class Valhalla.Modules.Fuse : Object, BaseModule {
         }
     }
 
-    public async void upload(Data.Transfer transfer) throws Error {
+    public override async void upload(Data.Transfer transfer)
+        throws Module.Error
+    {
         var file = transfer.file;
         var dest_filename = @"$((!) file.crc32)$(file.guess_extension())";
 
         try {
-            transfer.set_remote_path(Path.build_filename(
-                (!) preferences[typeof(ServeURL)].value, dest_filename));
+            transfer.set_remote_path(Path.build_filename((!) serve_url.value,
+                dest_filename));
         } catch {
             return;
         }
 
-        var mount = yield mounter.create(preferences);
+        var mount = yield mounter.create(mount_command.value);
 
         var dest_file = File.new_for_path(Path.build_filename(mount.path,
             dest_filename));
@@ -167,8 +167,8 @@ public class Valhalla.Modules.Fuse : Object, BaseModule {
         try {
             stream = yield dest_file.replace_readwrite_async(null, false,
                 FileCreateFlags.REPLACE_DESTINATION);
-        } catch (GLib.Error e) {
-            throw new Error.GENERIC_ERROR(e.message);
+        } catch (Error e) {
+            throw new Module.Error.GENERIC_ERROR(e.message);
         }
         bool success = true;
         for (var i = 0; i <= file.file_contents.length/1024; i++) {
@@ -180,7 +180,7 @@ public class Valhalla.Modules.Fuse : Object, BaseModule {
                 yield stream.output_stream.write_async(
                     file.file_contents[offset:offset+frame_length]);
             } catch (IOError e) {
-                throw new Error.GENERIC_ERROR(e.message);
+                throw new Module.Error.GENERIC_ERROR(e.message);
             }
             transfer.progress(offset+frame_length);
             if (transfer.cancellable.is_cancelled()) {
@@ -199,16 +199,17 @@ public class Valhalla.Modules.Fuse : Object, BaseModule {
             try {
                 yield dest_file.delete_async();
             } catch (GLib.Error e) {
-                throw new Error.GENERIC_ERROR("Failed to cancel upload: %s",
-                    e.message);
+                throw new Module.Error.GENERIC_ERROR(
+                    "Failed to cancel upload: %s", e.message);
             }
+    }
+
+    construct {
+        mount_command = this.register_preference(typeof(MountCommand));
+        serve_url = this.register_preference(typeof(ServeURL));
     }
 }
 
-public Type register_module() {
+public Type register_uploader() {
     return typeof(Fuse);
-}
-
-public Type[] register_preferences() {
-    return {typeof(MountCommand), typeof(ServeURL)};
 }

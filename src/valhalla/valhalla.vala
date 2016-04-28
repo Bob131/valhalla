@@ -10,8 +10,12 @@ public class DBusHooks : Object {
     }
 }
 
-class ModulePreference : Object, Preferences.Preference {
-    public string? value {set; get;}
+public string config_directory() {
+    var dir = Path.build_filename(Environment.get_user_config_dir(),
+            "valhalla");
+    if (!FileUtils.test(dir, FileTest.EXISTS))
+        DirUtils.create(dir, 0700);
+    return dir;
 }
 
 // TODO:
@@ -20,9 +24,8 @@ class ModulePreference : Object, Preferences.Preference {
 class valhalla : Gtk.Application {
     public Widgets.Window? window {private set; get; default = null;}
     public Database.Database database {construct; get;}
-    public Preferences.GlobalContext prefs {construct; get;}
     public Thumbnailer thumbnailer {construct; get;}
-    public Modules.Loader modules {private set; get;}
+    public Valhalla.Module.Loader loader {construct; get;}
 
     protected override void open(File[] files, string _) {
         activate();
@@ -66,10 +69,8 @@ class valhalla : Gtk.Application {
         Object(application_id: "so.bob131.valhalla",
             flags: ApplicationFlags.HANDLES_OPEN,
             database: new Database.Database(),
-            prefs: new Preferences.GlobalContext(),
-            thumbnailer: new Thumbnailer());
-        prefs.app_preferences.register_preference(typeof(ModulePreference));
-        modules = new Modules.Loader(prefs);
+            thumbnailer: new Thumbnailer(),
+            loader: new Valhalla.Module.Loader());
     }
 
     public static int main(string[] args) {

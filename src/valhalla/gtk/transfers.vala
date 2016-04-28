@@ -1,7 +1,3 @@
-errordomain Valhalla.Preferences.Error {
-    KEY_NOT_SET;
-}
-
 namespace Valhalla.Data {
     public class RealTransferFile : RemoteFile, TransferFile {
         public string file_name {set; get;}
@@ -13,7 +9,7 @@ namespace Valhalla.Data {
             if (path.has_prefix("file://"))
                 path = path[7:path.length];
 
-            var file = File.new_for_path(path);
+            var file = GLib.File.new_for_path(path);
             uint8[] tmp;
             file.load_contents(null, out tmp, null);
 
@@ -27,11 +23,11 @@ namespace Valhalla.Data {
             crc32 = "%08x".printf(
                 (uint) ZLib.Utility.adler32(1, file_contents));
 
-            var _module_name = Widgets.get_app()
-                .prefs.app_preferences[typeof(ModulePreference)].value;
-            if (_module_name == null)
-                throw new Preferences.Error.KEY_NOT_SET("Please configure a %s",
+            var module = Widgets.get_app().loader.get_active();
+            if (module == null)
+                throw new KeyFileError.KEY_NOT_FOUND("Please configure a %s",
                     "module in the preferences panel");
+            module_name = ((!) module).get_type().name();
         }
     }
 }
@@ -63,7 +59,7 @@ namespace Valhalla.Widgets {
         private Database.RemoteFile get_offender() {
             var files = db.query(true, crc32: real_file.crc32);
             if (files.length == 0)
-                files = db.query(true, remote_path: real_file.remote_path);
+                files = db.query(true, "remote_path", real_file.remote_path);
             assert (files.length > 0);
             return files[0];
         }
@@ -102,8 +98,8 @@ namespace Valhalla.Widgets {
             get_app().thumbnailer.get_thumbnail.begin(real_file);
         }
 
-        public TransferWidget.from_path(owned string path) throws GLib.Error {
-            Object();
+        public TransferWidget.from_path(string path) throws GLib.Error {
+            Object(file: new Data.RealTransferFile(path));
 
             db = get_app().database;
             this.completed.connect(() => {

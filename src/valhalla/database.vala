@@ -1,7 +1,7 @@
 namespace Valhalla.Data {
-    public abstract class RemoteFile : BaseFile {
-        public override Time? timestamp {set; get; default=null;}
-        public override string? crc32 {set; get; default=null;}
+    public abstract class RemoteFile : File {
+        public override Time? timestamp {set; get;}
+        public override string? crc32 {set; get;}
         public override string file_type {set; get;
             default="application/octet-stream";}
 
@@ -9,9 +9,9 @@ namespace Valhalla.Data {
         public string _remote_path {set; get;}
         public override string remote_path {get {return _remote_path;}}
 
-        public string? local_path {set; get; default=null;}
-        public uint64? file_size {set; get; default=null;}
-        public string? module_name {set; get; default=null;}
+        public string? local_path {set; get;}
+        public uint64? file_size {set; get;}
+        public string? module_name {set; get;}
     }
 }
 
@@ -26,11 +26,11 @@ namespace Valhalla.Database {
         public override string? crc32 {set; get; default=null;}
         public override string file_type {set; get; default="application/octect-stream";}
 
-        public Modules.BaseModule? module {owned get {
+        public Module.Uploader? module {owned get {
             if (module_name == null)
                 return null;
             return ((valhalla) Application.get_default())
-                .modules[(!) module_name];
+                .loader[(!) module_name];
         }}
 
         public string display_name {owned get {
@@ -88,8 +88,7 @@ namespace Valhalla.Database {
         private Sqlite.Database db;
 
         private string db_path {owned get {
-            return Path.build_filename(Preferences.config_directory(),
-                "files.db");
+            return Path.build_filename(config_directory(), "files.db");
         }}
 
         public bool unique_url(string url) {
@@ -160,7 +159,7 @@ namespace Valhalla.Database {
         public void commit(Data.RemoteFile file) {
             Sqlite.Statement stmt;
 
-            string?[] fields = {"file_type", "remote_path"};
+            string[] fields = {"file_type", "remote_path"};
             if (file.timestamp != null)
                 fields += "timestamp";
             if (file.crc32 != null)
@@ -173,9 +172,8 @@ namespace Valhalla.Database {
                 fields += "module_name";
 
             var sql = "INSERT OR REPLACE INTO Files (%s) VALUES (%s)".printf(
-                string.joinv(",", fields),
-                "$%s".printf(string.joinv(",$", fields)));
-            message(sql);
+                string.joinv(",", (string?[]) fields),
+                "$%s".printf(string.joinv(",$", (string?[]) fields)));
 
             db.prepare_v2(sql, -1, out stmt);
 

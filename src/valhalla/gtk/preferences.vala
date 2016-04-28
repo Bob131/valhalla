@@ -3,18 +3,18 @@ namespace Valhalla.Widgets {
     class Preferences : Gtk.Box {
         [GtkTemplate (ui = "/so/bob131/valhalla/gtk/preferences-list-row.ui")]
         private class ListRow : Gtk.Box {
-            public Modules.BaseModule module {construct; get;}
+            public Module.Uploader uploader {construct; get;}
 
             [GtkChild]
-            private Gtk.Label module_name;
+            private Gtk.Label uploader_name;
             [GtkChild]
-            private Gtk.Label module_description;
+            private Gtk.Label description;
 
-            public ListRow(Modules.BaseModule module) {
-                Object(module: module);
-                module_name.label = module.pretty_name;
-                module_description.label =
-                    @"<small>$(module.description)</small>";
+            public ListRow(Module.Uploader uploader) {
+                Object(uploader: uploader);
+                uploader_name.label = uploader.pretty_name;
+                description.label =
+                    @"<small>$(uploader.description)</small>";
             }
         }
 
@@ -27,9 +27,8 @@ namespace Valhalla.Widgets {
         private void module_selected(Gtk.ListBoxRow? row) {
             if (row == null)
                 return;
-            var module = ((ListRow) ((!) row).get_child()).module;
-            get_app().prefs.app_preferences[typeof(ModulePreference)].value =
-                module.get_type().name();
+            var module = ((ListRow) ((!) row).get_child()).uploader;
+            get_app().loader.set_active(module.get_type().name());
             foreach (var child in controls.get_children())
                 child.destroy();
             if (!module.implements_delete) {
@@ -42,8 +41,7 @@ namespace Valhalla.Widgets {
                 controls.add(caution);
             }
             var size_group = new Gtk.SizeGroup(Gtk.SizeGroupMode.HORIZONTAL);
-            var prefs = get_app().prefs[module.get_type().name()];
-            foreach (var pref in prefs.pref_objects) {
+            foreach (var pref in module.preferences) {
                 if (pref is Gtk.Widget)
                     controls.add((Gtk.Widget) pref);
                 else {
@@ -60,7 +58,8 @@ namespace Valhalla.Widgets {
                     size_group.add_widget(entry);
                     if (pref.default != null)
                         entry.placeholder_text = (!) pref.default;
-                    entry.bind_property("text", pref, "value");
+                    pref.bind_property("value", entry, "text",
+                        BindingFlags.BIDIRECTIONAL|BindingFlags.SYNC_CREATE);
                     control.add(entry);
 
                     if (pref.help_text != null) {
@@ -88,9 +87,9 @@ namespace Valhalla.Widgets {
 
         construct {
             var i = 0;
-            foreach (var module in get_app().modules) {
+            foreach (var module in get_app().loader.modules) {
                 modules.add(new ListRow(module));
-                if (module == get_app().modules.get_active_module())
+                if (module == get_app().loader.get_active())
                     modules.select_row(modules.get_row_at_index(i));
                 else
                     i++;

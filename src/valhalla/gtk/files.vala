@@ -123,7 +123,7 @@ namespace Valhalla.Widgets {
                             ((!) file.module).delete.end(res);
                             file.remove_from_database();
                             get_main_window().stack_notify("File deleted");
-                        } catch (Modules.Error e) {
+                        } catch (Module.Error e) {
                             get_main_window().display_error(e.message);
                         }
                         forget_button.sensitive = true;
@@ -298,7 +298,7 @@ namespace Valhalla.Widgets {
                     yield ((!) file.module).delete(file.remote_path);
                     file.remove_from_database();
                 }
-            } catch (Modules.Error e) {
+            } catch (Module.Error e) {
                 get_main_window().display_error(e.message);
             }
             get_main_window().delete_progress_reveal.reveal_child = false;

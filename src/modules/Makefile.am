@@ -1,6 +1,6 @@
 common_valaflags = \
 	--pkg gio-2.0 \
-	--pkg gtk+-3.0 \
+	--pkg gee-0.8 \
 	--pkg valhalla \
 	$(valhalla_U_VALAFLAGS)
 
@@ -23,6 +23,7 @@ pkglib_LTLIBRARIES = \
 fuse_la_SOURCES = fuse.vala
 fuse_la_VALAFLAGS = \
 	--pkg posix \
+	--pkg gtk+-3.0 \
 	$(common_valaflags)
 fuse_la_CFLAGS = $(common_cflags)
 fuse_la_LIBADD = $(common_libadd)

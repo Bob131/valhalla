@@ -1,38 +1,136 @@
-namespace Valhalla.Modules {
+namespace Valhalla.Module {
     // provided by autotools; typically points to /usr/lib64/valhalla
     private extern const string MODULEDIR;
 
+    public class UploaderModule : Object {
+        public string path {construct; get;}
+        public Uploader uploader {private set; get;}
+        private GLib.Module? module = null;
+        private KeyFile keyfile;
+        [CCode (has_target = false)]
+        private delegate Type UploaderRegistrar();
+
+        public signal void commit_preferences();
+
+        public UploaderModule(string path, KeyFile keyfile) {
+            Object(path: path);
+            this.keyfile = keyfile;
+        }
+
+        public bool load() {
+            module = GLib.Module.open(path, ModuleFlags.BIND_LAZY);
+            if (module == null) {
+                warning("Could not load %s", GLib.Module.error());
+                return false;
+            }
+
+            void* data;
+            ((!) module).symbol("register_uploader", out data);
+            var registrar_func = (UploaderRegistrar) data;
+            if (registrar_func == null) {
+                warning("Could not load %s: %s", ((!) module).name(),
+                    "Function 'register_uploader' not found");
+                return false;
+            }
+
+            uploader = (Uploader) Object.new(registrar_func());
+            foreach (var pref in uploader.preferences) {
+                var section = uploader.get_type().name();
+                var key = pref.get_type().name();
+                pref.notify["value"].connect(() => {
+                    if (pref.value == "")
+                        pref.value = null;
+                    if (pref.value == null && pref.default != null)
+                        pref.value = pref.default;
+
+                    try {
+                        if (pref.value == null) {
+                            if (keyfile.has_key(section, key))
+                                keyfile.remove_key(section, key);
+                        } else
+                            keyfile.set_value(section, key, (!) pref.value);
+                    } catch (KeyFileError e) {
+                        // bad news
+                        error("Failed to set key '%s' with value '%s': %s", key,
+                            (!) (pref.value ?? "(null)"), e.message);
+                    }
+
+                    commit_preferences();
+                });
+                try {
+                    pref.value = keyfile.get_value(section, key);
+                } catch {}
+            }
+
+            return true;
+        }
+    }
+
     public class Loader : Object {
-        public Preferences.GlobalContext prefs {construct; private get;}
-        private Gee.HashMap<string, BaseModule> modules =
-            new Gee.HashMap<string, BaseModule>();
+        private Gee.HashMap<string, Uploader> _modules =
+            new Gee.HashMap<string, Uploader>();
+        public Gee.Collection<Uploader> modules {owned get {
+            return _modules.values;
+        }}
+
+        private string[] known_filenames = {};
+        private KeyFile keyfile;
+
         private string[] paths {owned get {
             return {Path.build_filename(Environment.get_user_data_dir(),
                 "valhalla"), MODULEDIR};
         }}
+        private string prefs_path {owned get {
+            return Path.build_filename(config_directory(), "valhalla.conf");
+        }}
 
-        public BaseModule? get_active_module() {
-            var module_name =
-                prefs.app_preferences[typeof(ModulePreference)].value;
-            if (module_name == null)
+        public Uploader? get_active() {
+            string module_name;
+            try {
+                module_name = keyfile.get_value("Valhalla", "Uploader");
+            } catch {
                 return null;
-            if (!modules.has_key((!) module_name))
-                error("File upload module '%s' doesn't exist", (!) module_name);
-            return modules[(!) module_name];
+            }
+            if (!_modules.has_key(module_name))
+                error("File upload module '%s' doesn't exist", module_name);
+            return _modules[module_name];
         }
 
-        public new BaseModule @get(string key) {
-            return modules[key];
+        public void set_active(string name) {
+            assert (_modules.has_key(name));
+            keyfile.set_value("Valhalla", "Uploader", name);
+            write();
         }
 
-        public Gee.Iterator<BaseModule> iterator() {
-            return modules.values.iterator();
+        public new Uploader @get(string key) {
+            return _modules[key];
         }
 
-        public Loader(Preferences.GlobalContext prefs) {
-            Object(prefs: prefs);
+        private void write() {
+            try {
+                FileUtils.set_contents(prefs_path, keyfile.to_data());
+            } catch (FileError e) {
+                warning(e.message);
+            }
+        }
 
-            if (!Module.supported())
+        public Loader() {
+            Object();
+
+            keyfile = new KeyFile();
+            try {
+                keyfile.load_from_file(prefs_path,
+                    KeyFileFlags.KEEP_COMMENTS|KeyFileFlags.KEEP_TRANSLATIONS);
+            } catch (KeyFileError e) {
+                warning(e.message);
+            } catch (FileError e) {
+                if (e is FileError.NOENT)
+                    write();
+                else
+                    warning(e.message);
+            }
+
+            if (!GLib.Module.supported())
                 error("Modules aren't supported on this system");
 
             foreach (var path in paths) {
@@ -51,31 +149,17 @@ namespace Valhalla.Modules {
                             fname.reverse().split(".", 2)[1].reverse();
                     else
                         module_name = fname;
-
-                    if (modules.has_key(module_name) || module_name == "libgd")
+                    if (module_name == "libgd" ||
+                            module_name in known_filenames)
                         continue;
-
-                    var module = Module.open(Path.build_filename(path, fname),
-                        ModuleFlags.BIND_LAZY);
-                    if (module != null) {
-                        void* data;
-                        ((!) module).symbol("register_module", out data);
-                        var registrar_func = (ModuleRegistrar) data;
-                        ((!) module).symbol("register_preferences", out data);
-                        var pref_reg_func = (PrefRegistrar) data;
-                        if (registrar_func != null && pref_reg_func != null) {
-                            var object =
-                                (BaseModule) Object.new(registrar_func());
-                            modules[object.get_type().name()] = object;
-                            foreach (var pref in pref_reg_func())
-                                prefs[object.get_type().name()]
-                                    .register_preference(pref);
-                            ((!) module).make_resident();
-                        } else
-                            warning("Could not load %s: %s", module_name,
-                                "Function 'register_module' not found");
-                    } else
-                        warning("Could not load %s", Module.error());
+                    var module = new UploaderModule(
+                        Path.build_filename(path, fname), keyfile);
+                    if (!module.load())
+                        continue;
+                    _modules[module.uploader.get_type().name()] =
+                        module.uploader;
+                    module.commit_preferences.connect(() => {write();});
+                    known_filenames += module_name;
                 }
             }
 

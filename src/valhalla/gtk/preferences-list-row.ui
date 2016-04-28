@@ -6,13 +6,13 @@
     <property name="margin-left">20</property>
     <property name="margin-right">10</property>
     <child>
-      <object class="GtkLabel" id="module_name">
+      <object class="GtkLabel" id="uploader_name">
         <property name="halign">end</property>
         <property name="justify">right</property>
       </object>
     </child>
     <child>
-      <object class="GtkLabel" id="module_description">
+      <object class="GtkLabel" id="description">
         <property name="halign">end</property>
         <property name="justify">right</property>
         <property name="use-markup">true</property>

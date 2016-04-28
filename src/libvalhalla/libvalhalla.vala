@@ -9,7 +9,7 @@ namespace Valhalla {
             TRANSFER_CANCELLED, INVALID_REMOTE_PATH;
         }
 
-        public abstract class BaseFile : Object {
+        public abstract class File : Object {
             public abstract Time? timestamp {protected set; get;}
             public abstract string? crc32 {protected set; get;}
             public abstract string file_type {protected set; get;}
@@ -17,7 +17,7 @@ namespace Valhalla {
         }
 
         // timestamp & crc32 guaranteed to be non-null
-        public interface TransferFile : BaseFile {
+        public interface TransferFile : File {
             public abstract string file_name {protected set; get;}
             public abstract uint8[] file_contents {protected set; get;}
 
@@ -63,7 +63,11 @@ namespace Valhalla {
         }
     }
 
-    namespace Preferences {
+    namespace Module {
+        public errordomain Error {
+            GENERIC_ERROR, NOT_IMPLEMENTED;
+        }
+
         public interface Preference : Object {
             public virtual string? pretty_name {get {return null;}}
             public virtual string? help_text {get {return null;}}
@@ -73,23 +77,7 @@ namespace Valhalla {
             public abstract string? @value {set; get;}
         }
 
-        public interface Context : Object {
-            public abstract void register_preference(Type type);
-            public abstract Preference @get(Type type);
-        }
-    }
-
-    namespace Modules {
-        public errordomain Error {
-            GENERIC_ERROR, NOT_IMPLEMENTED;
-        }
-
-        [CCode (has_target = false)]
-        public delegate Type ModuleRegistrar();
-        [CCode (has_target = false)]
-        public delegate Type[] PrefRegistrar();
-
-        public interface BaseModule : Object {
+        public abstract class Uploader : Object {
             public abstract string pretty_name {get;}
             public abstract string description {get;}
 
@@ -99,6 +87,18 @@ namespace Valhalla {
             }
 
             public abstract async void upload(Data.Transfer t) throws Error;
+
+            private Gee.HashSet<Preference> _prefs =
+                new Gee.HashSet<Preference>();
+            public Gee.Set<Preference> preferences {owned get {
+                return _prefs.read_only_view;
+            }}
+            protected Preference register_preference(Type type) {
+                assert (type.is_a(typeof(Preference)));
+                var pref = (Preference) Object.new(type);
+                _prefs.add(pref);
+                return pref;
+            }
         }
     }
 }

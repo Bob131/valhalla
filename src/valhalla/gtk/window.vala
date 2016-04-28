@@ -93,7 +93,7 @@ namespace Valhalla.Widgets {
             }
             if (transfer.cancellable.is_cancelled())
                 return;
-            var module = this.application.modules.get_active_module();
+            var module = this.application.loader.get_active();
             transfer.completed.connect(() => {
                 if (!(main_window_stack.visible_child is Transfers))
                     main_window_stack.child_set(transfers, "needs-attention",
@@ -111,7 +111,7 @@ namespace Valhalla.Widgets {
             transfers.add(transfer);
             try {
                 yield ((!) module).upload(transfer);
-            } catch (Modules.Error e) {
+            } catch (Module.Error e) {
                 transfer.failed();
                 display_error(e.message);
             }
@@ -133,12 +133,19 @@ namespace Valhalla.Widgets {
 
         [GtkCallback]
         public async void capture_screenshot() {
-            var module = this.application.modules.get_active_module();
+            var module = this.application.loader.get_active();
             if (module == null) {
                 display_error(
                     "Please configure a module in the preferences panel");
                 return;
             }
+            SourceFunc fail = () => {
+                if (this.one_shot && !this.visible)
+                    this.close();
+                else
+                    this.visible = true;
+                return false;
+            };
             this.visible = false;
             var screenshot = yield Screenshot.take_interactive();
             if (screenshot != null) {
@@ -201,32 +208,37 @@ namespace Valhalla.Widgets {
                     this.get_screen())));
                 inner.show_all();
 
-                var response = dialog.run();
-                if (response == Gtk.ResponseType.OK) {
-                    FileIOStream streams;
-                    File file;
-                    try {
-                        file = File.new_tmp("valhalla_XXXXXX.png", out streams);
-                        ((!) screenshot).save_to_stream(streams.output_stream,
-                            "png");
-                        kickoff_upload.begin((!) file.get_path(), true,
-                                (obj, res) => {
-                            kickoff_upload.end(res);
-                            try {
-                                file.delete();
-                            } catch {}
-                        });
-                    } catch (GLib.Error e) {
-                        new Gtk.MessageDialog(dialog, Gtk.DialogFlags.MODAL,
-                            Gtk.MessageType.ERROR, Gtk.ButtonsType.CLOSE,
-                            "Failed to save screenshot: %s", e.message).run();
-
-                    }
-                }
-                dialog.close();
-            } else if (this.one_shot)
-                this.close();
-            this.visible = true;
+                dialog.response.connect((response) => {
+                    if (response == Gtk.ResponseType.OK) {
+                        FileIOStream streams;
+                        File file;
+                        try {
+                            file = File.new_tmp("valhalla_XXXXXX.png", out streams);
+                            ((!) screenshot).save_to_stream(streams.output_stream,
+                                "png");
+                            this.visible = true;
+                            dialog.close();
+                            kickoff_upload.begin((!) file.get_path(), true,
+                                    (obj, res) => {
+                                kickoff_upload.end(res);
+                                try {
+                                    file.delete();
+                                } catch {}
+                            });
+                        } catch (GLib.Error e) {
+                            new Gtk.MessageDialog(dialog, Gtk.DialogFlags.MODAL,
+                                Gtk.MessageType.ERROR, Gtk.ButtonsType.CLOSE,
+                                "Failed to save screenshot: %s", e.message).run();
+                        }
+                    } else if (response != Gtk.ResponseType.DELETE_EVENT)
+                        dialog.close();
+                });
+                dialog.close.connect(() => {
+                    fail();
+                });
+                dialog.show_all();
+            } else
+                fail();
         }
 
         private void select_toggle_on(Gtk.ToggleButton button) {

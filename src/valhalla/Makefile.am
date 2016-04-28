@@ -19,7 +19,6 @@ valhalla_SOURCES = \
 	gtk/window.vala \
 	database.vala \
 	loader.vala \
-	preferences.vala \
 	screenshot.vala \
 	thumbnailer.vala \
 	valhalla.vala
@@ -39,7 +38,7 @@ valhalla_VALAFLAGS = \
 	$(valhalla_U_VALAFLAGS)
 
 valhalla_CFLAGS = \
-	-DVALHALLA_MODULES_MODULEDIR=\"$(pkglibdir)\" \
+	-DVALHALLA_MODULE_MODULEDIR=\"$(pkglibdir)\" \
 	-I $(top_srcdir)/libgd -I $(top_srcdir)/src/libvalhalla \
 	$(valhalla_U_CFLAGS)
 
