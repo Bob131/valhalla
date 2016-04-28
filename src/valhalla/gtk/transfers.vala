@@ -1,3 +1,7 @@
+errordomain Valhalla.Preferences.Error {
+    KEY_NOT_SET;
+}
+
 namespace Valhalla.Data {
     public class RealTransferFile : RemoteFile, TransferFile {
         public string file_name {set; get;}
@@ -24,9 +28,9 @@ namespace Valhalla.Data {
                 (uint) ZLib.Utility.adler32(1, file_contents));
 
             var _module_name = Widgets.get_app()
-                .settings_context.app_settings["module"];
+                .prefs.app_preferences[typeof(ModulePreference)].value;
             if (_module_name == null)
-                throw new Config.Error.KEY_NOT_SET("Please configure a %s",
+                throw new Preferences.Error.KEY_NOT_SET("Please configure a %s",
                     "module in the preferences panel");
         }
     }

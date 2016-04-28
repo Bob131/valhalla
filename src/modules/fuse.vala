@@ -1,39 +1,22 @@
 using Valhalla;
 using Valhalla.Modules;
 
-class BaseEntry : Gtk.Entry {
-    public string read() {
-        return this.text;
-    }
-    public void write(string val) {
-        this.text = val;
-    }
-}
-
-class Command : BaseEntry, Config.Preference {
-    public string key {get {return "mount-command";}}
+class MountCommand : Object, Preferences.Preference {
     public string? @default {get {
         return "sshfs example.com:/var/www/shared $f -C -o sshfs_sync";}}
-    public string? label {get {return "Mount command";}}
-    public string? help {get {
+    public string? pretty_name {get {return "Mount command";}}
+    public string? help_text {get {
         return "Command to mount the filesystem\n" +
             "Use '$f' to indicate mount point";}}
-    construct {
-        this.placeholder_text = (!) @default;
-        this.changed.connect(() => {this.change_notify();});
-    }
+    public string? @value {set; get;}
 }
 
-class Serve : BaseEntry, Config.Preference {
-    public string key {get {return "serve-url";}}
+class ServeURL : Object, Preferences.Preference {
     public string? @default {get {return "https://shared.example.com";}}
-    public string? label {get {return "Serve URL";}}
-    public string? help {get {
+    public string? pretty_name {get {return "Serve URL";}}
+    public string? help_text {get {
         return "The base URL at which files will appear";}}
-    construct {
-        this.placeholder_text = (!) @default;
-        this.changed.connect(() => {this.change_notify();});
-    }
+    public string? @value {set; get;}
 }
 
 interface MountData : Object {
@@ -80,14 +63,19 @@ class Valhalla.Modules.MountMan : Object {
         mount_in_progress = false;
     }
 
-    public async MountData create(Config.Settings settings) throws Error {
+    public async MountData create(Preferences.Context prefs) throws Error {
         var path = Path.build_filename(Environment.get_tmp_dir(),
             "valhalla_mount");
         DirUtils.create(path, 0700);
 
+        var mount_cmd_pref = prefs[typeof(MountCommand)];
+        if (mount_cmd_pref.value == null)
+            throw new Error.GENERIC_ERROR(
+                "Please set a mount command in the preferences panel");
+
         var umount_cmd = "fusermount -u %s".printf(Shell.quote(path));
-        var mount_cmd = ((!) (settings["mount-command"] ?? ""))
-            .replace("$f", Shell.quote(path));
+        var mount_cmd = ((!) mount_cmd_pref.value).replace("$f",
+            Shell.quote(path));
 
         yield wait_on_mount();
         AtomicInt.add(ref mounts, 1);
@@ -138,29 +126,21 @@ class Valhalla.Modules.MountMan : Object {
 }
 
 public class Valhalla.Modules.Fuse : Object, BaseModule {
-    public string name {get {return "fuse";}}
     public string pretty_name {get {return "FuseFS";}}
     public string description {get {
         return "Mounts and copies to a\nfuse filesystem";}}
-    public Config.Settings settings {set; get;}
+    public Preferences.Context preferences {construct; get;}
 
     private MountMan mounter = new MountMan();
 
-    public Config.Preference[] build_panel() {
-        Config.Preference[] result = {};
-        result += new Command();
-        result += new Serve();
-        return result;
-    }
-
     public bool implements_delete {get {return true;}}
     public async void @delete(string remote_path) throws Error {
-        if (!remote_path.has_prefix((!) settings["serve-url"]))
+        var configured_url = (!) preferences[typeof(ServeURL)].value;
+        if (!remote_path.has_prefix(configured_url))
             throw new Error.GENERIC_ERROR("Invalid remote path");
-        var filename = remote_path[
-            ((!) settings["serve-url"]).length:remote_path.length];
+        var filename = remote_path[configured_url.length:remote_path.length];
         filename = filename.replace("/", "");
-        var mount = yield mounter.create(settings);
+        var mount = yield mounter.create(preferences);
         var path = Path.build_filename(mount.path, filename);
         if (FileUtils.test(path, FileTest.EXISTS)) {
             var file = File.new_for_path(path);
@@ -174,12 +154,12 @@ public class Valhalla.Modules.Fuse : Object, BaseModule {
 
         try {
             transfer.set_remote_path(Path.build_filename(
-                (!) settings["serve-url"], dest_filename));
+                (!) preferences[typeof(ServeURL)].value, dest_filename));
         } catch {
             return;
         }
 
-        var mount = yield mounter.create(settings);
+        var mount = yield mounter.create(preferences);
 
         var dest_file = File.new_for_path(Path.build_filename(mount.path,
             dest_filename));
@@ -225,6 +205,10 @@ public class Valhalla.Modules.Fuse : Object, BaseModule {
     }
 }
 
-public Type[] register_module() {
-    return {typeof(Fuse)};
+public Type register_module() {
+    return typeof(Fuse);
+}
+
+public Type[] register_preferences() {
+    return {typeof(MountCommand), typeof(ServeURL)};
 }

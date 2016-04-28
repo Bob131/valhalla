@@ -88,7 +88,8 @@ namespace Valhalla.Database {
         private Sqlite.Database db;
 
         private string db_path {owned get {
-            return Path.build_filename(Config.config_directory(), "files.db");
+            return Path.build_filename(Preferences.config_directory(),
+                "files.db");
         }}
 
         public bool unique_url(string url) {

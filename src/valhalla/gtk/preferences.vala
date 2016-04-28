@@ -28,7 +28,8 @@ namespace Valhalla.Widgets {
             if (row == null)
                 return;
             var module = ((ListRow) ((!) row).get_child()).module;
-            get_app().settings_context.app_settings["module"] = module.name;
+            get_app().prefs.app_preferences[typeof(ModulePreference)].value =
+                module.get_type().name();
             foreach (var child in controls.get_children())
                 child.destroy();
             if (!module.implements_delete) {
@@ -41,43 +42,46 @@ namespace Valhalla.Widgets {
                 controls.add(caution);
             }
             var size_group = new Gtk.SizeGroup(Gtk.SizeGroupMode.HORIZONTAL);
-            foreach (var pref in module.build_panel()) {
-                var indent = 0;
-                if (pref.label != null) {
-                    var label = new Gtk.Label(pref.label);
+            var prefs = get_app().prefs[module.get_type().name()];
+            foreach (var pref in prefs.pref_objects) {
+                if (pref is Gtk.Widget)
+                    controls.add((Gtk.Widget) pref);
+                else {
+                    var control = new Gtk.Box(Gtk.Orientation.VERTICAL, 6);
+
+                    var label = new Gtk.Label(
+                        pref.pretty_name ?? pref.get_type().name());
                     label.halign = Gtk.Align.START;
-                    controls.add(label);
-                    indent = 12;
+                    control.add(label);
+
+                    var entry = new Gtk.Entry();
+                    entry.margin_left = 12;
+                    entry.hexpand = true;
+                    size_group.add_widget(entry);
+                    if (pref.default != null)
+                        entry.placeholder_text = (!) pref.default;
+                    entry.bind_property("text", pref, "value");
+                    control.add(entry);
+
+                    if (pref.help_text != null) {
+                        var help_popover = new Gtk.Popover(entry);
+                        var help_label = new Gtk.Label(pref.help_text);
+                        help_label.margin = 6;
+                        help_label.visible = true;
+                        help_popover.add(help_label);
+                        help_popover.modal = false;
+                        help_popover.position = Gtk.PositionType.BOTTOM;
+                        entry.event.connect((e) => {
+                            if (e.type == Gdk.EventType.ENTER_NOTIFY)
+                                help_popover.show();
+                            else if (e.type == Gdk.EventType.LEAVE_NOTIFY)
+                                help_popover.hide();
+                            return false;
+                        });
+                    }
+
+                    controls.add(control);
                 }
-                pref.margin_left = indent;
-                pref.hexpand = true;
-                size_group.add_widget(pref);
-                if (pref.help != null) {
-                    var help_popover = new Gtk.Popover(pref);
-                    var help_label = new Gtk.Label(pref.help);
-                    help_label.margin = 6;
-                    help_label.visible = true;
-                    help_popover.add(help_label);
-                    help_popover.modal = false;
-                    help_popover.position = Gtk.PositionType.BOTTOM;
-                    pref.event.connect((e) => {
-                        if (e.type == Gdk.EventType.ENTER_NOTIFY)
-                            help_popover.show();
-                        else if (e.type == Gdk.EventType.LEAVE_NOTIFY)
-                            help_popover.hide();
-                        return false;
-                    });
-                }
-                if (module.settings[pref.key] != null)
-                    pref.write(module.settings[pref.key]);
-                if (pref.default != null)
-                    ((Config.MutableSettings) module.settings)
-                        .set_default(pref.key, (!) pref.default);
-                pref.change_notify.connect(() => {
-                    ((Config.MutableSettings) module.settings)[pref.key] =
-                        pref.read();
-                });
-                controls.add(pref);
             }
             controls.show_all();
         }

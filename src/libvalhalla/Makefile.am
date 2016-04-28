@@ -9,8 +9,6 @@ valhallaheader_DATA = valhalla.h
 libvalhalla_la_SOURCES = libvalhalla.vala
 libvalhalla_la_VALAFLAGS = \
 	--pkg gio-2.0 \
-	--pkg gee-0.8 \
-	--pkg gtk+-3.0 \
 	--library valhalla \
 	-H valhalla.h \
 	--vapi $(top_srcdir)/vapi/valhalla.vapi \

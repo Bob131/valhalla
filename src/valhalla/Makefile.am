@@ -17,9 +17,9 @@ valhalla_SOURCES = \
 	gtk/preferences.vala \
 	gtk/transfers.vala \
 	gtk/window.vala \
-	config.vala \
 	database.vala \
 	loader.vala \
+	preferences.vala \
 	screenshot.vala \
 	thumbnailer.vala \
 	valhalla.vala
@@ -79,7 +79,8 @@ CLEANFILES = \
 	$(valhalla_SOURCES:%.vala=%.c) \
 	$(valhalla_screenshot_SOURCES:%.vala=%.c) \
 	$(libnautilus_valhalla_la_SOURCES) \
-	*.stamp
+	*.stamp \
+	*.stamp-t
 
 EXTRA_DIST = \
 	gresources.xml \

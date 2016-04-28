@@ -63,25 +63,19 @@ namespace Valhalla {
         }
     }
 
-    namespace Config {
-        public errordomain Error {
-            KEY_NOT_SET;
-        }
-
-        public interface Settings : Object {
-            public abstract string? @get(string key);
-        }
-
-        public interface Preference : Gtk.Widget {
-            public abstract string key {get;}
+    namespace Preferences {
+        public interface Preference : Object {
+            public virtual string? pretty_name {get {return null;}}
+            public virtual string? help_text {get {return null;}}
             public virtual string? @default {get {return null;}}
-            public virtual string? label {get {return null;}}
-            public virtual string? help {get {return null;}}
 
-            public signal void change_notify();
+            // returns null if pref has not been set and no default is provided
+            public abstract string? @value {set; get;}
+        }
 
-            public abstract string read();
-            public abstract void write(string? val);
+        public interface Context : Object {
+            public abstract void register_preference(Type type);
+            public abstract Preference @get(Type type);
         }
     }
 
@@ -91,20 +85,19 @@ namespace Valhalla {
         }
 
         [CCode (has_target = false)]
-        public delegate Type[] ModuleRegistrar();
+        public delegate Type ModuleRegistrar();
+        [CCode (has_target = false)]
+        public delegate Type[] PrefRegistrar();
 
         public interface BaseModule : Object {
-            public abstract string name {get;}
             public abstract string pretty_name {get;}
             public abstract string description {get;}
-            public abstract Config.Settings settings {set; get;}
 
             public virtual bool implements_delete {get {return false;}}
             public virtual async void @delete(string remote_path) throws Error {
                 throw new Error.NOT_IMPLEMENTED("Delete not implmented");
             }
 
-            public abstract Config.Preference[] build_panel();
             public abstract async void upload(Data.Transfer t) throws Error;
         }
     }

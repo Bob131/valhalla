@@ -10,13 +10,17 @@ public class DBusHooks : Object {
     }
 }
 
+class ModulePreference : Object, Preferences.Preference {
+    public string? value {set; get;}
+}
+
 // TODO:
 // * module index functionality
 // * about dialog
 class valhalla : Gtk.Application {
     public Widgets.Window? window {private set; get; default = null;}
     public Database.Database database {construct; get;}
-    public Config.SettingsContext settings_context {construct; get;}
+    public Preferences.GlobalContext prefs {construct; get;}
     public Thumbnailer thumbnailer {construct; get;}
     public Modules.Loader modules {private set; get;}
 
@@ -62,9 +66,10 @@ class valhalla : Gtk.Application {
         Object(application_id: "so.bob131.valhalla",
             flags: ApplicationFlags.HANDLES_OPEN,
             database: new Database.Database(),
-            settings_context: new Config.SettingsContext(),
+            prefs: new Preferences.GlobalContext(),
             thumbnailer: new Thumbnailer());
-        modules = new Modules.Loader(settings_context);
+        prefs.app_preferences.register_preference(typeof(ModulePreference));
+        modules = new Modules.Loader(prefs);
     }
 
     public static int main(string[] args) {
