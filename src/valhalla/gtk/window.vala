@@ -17,12 +17,6 @@ namespace Valhalla.Widgets {
         [GtkChild]
         private Transfers transfers;
         [GtkChild]
-        private Gtk.Stack headerbar_stack;
-        [GtkChild]
-        private Gtk.HeaderBar main_headerbar;
-        [GtkChild]
-        private Gtk.HeaderBar selection_headerbar;
-        [GtkChild]
         private Gtk.InfoBar error_bar;
         [GtkChild]
         private Gtk.Label error_text;
@@ -31,17 +25,9 @@ namespace Valhalla.Widgets {
         [GtkChild]
         public Gtk.Stack main_window_stack;
         [GtkChild]
-        public Gtk.Revealer back_reveal;
+        private Gtk.Revealer back_reveal;
         [GtkChild]
-        public Gtk.Revealer delete_progress_reveal;
-        [GtkChild]
-        public Gtk.ToggleButton deselect_button;
-        [GtkChild]
-        public Gtk.Revealer context_revealer;
-        [GtkChild]
-        public Gtk.Button delete_button;
-        [GtkChild]
-        public Gtk.Label selection_indicator;
+        private Gtk.Revealer transfers_clear_revealer;
 
         public bool one_shot = false; // this is true if we've just been
                                       // launched for the purpose of capturing a
@@ -76,8 +62,6 @@ namespace Valhalla.Widgets {
         private void back_button_clicked() {
             file_window.back_button_clicked();
         }
-
-        private delegate void SignalCallback();
 
         public async void kickoff_upload(string path, bool switch_view = true) {
             // allow any pending Gtk events (like dialog destruction) to
@@ -241,50 +225,9 @@ namespace Valhalla.Widgets {
                 fail();
         }
 
-        private void select_toggle_on(Gtk.ToggleButton button) {
-            if (!button.active)
-                return;
-            file_window.toggle_selection_mode(true);
-            headerbar_stack.visible_child = selection_headerbar;
-            Timeout.add(headerbar_stack.get_transition_duration(), () => {
-                button.active = !button.active;
-                return false;
-            });
-        }
-
         [GtkCallback]
-        private void select_toggle_off(Gtk.ToggleButton button) {
-            if (button.active)
-                return;
-            file_window.toggle_selection_mode(false);
-            headerbar_stack.visible_child = main_headerbar;
-            Timeout.add(headerbar_stack.get_transition_duration(), () => {
-                button.active = !button.active;
-                return false;
-            });
-        }
-
-        [GtkCallback]
-        private void context_toggle(Gtk.ToggleButton button) {
-            if (this.main_window_stack.visible_child is Transfers &&
-                    button.active) {
-                transfers.clear();
-                button.active = false;
-            } else if (this.main_window_stack.visible_child is FileWindow)
-                select_toggle_on(button);
-        }
-
-        private bool context_button_logic(Gtk.Image button_image) {
-            var src = main_window_stack.visible_child;
-            if (src is FileWindow &&
-                    file_window.visible_child is Gtk.ScrolledWindow) {
-                button_image.icon_name = "object-select-symbolic";
-                return true;
-            } else if (src is Transfers) {
-                button_image.icon_name = "edit-clear-all-symbolic";
-                return true;
-            } else
-                return false;
+        private void transfers_clear(Gtk.Button _) {
+            transfers.clear();
         }
 
         public Window(valhalla application) {
@@ -304,13 +247,10 @@ namespace Valhalla.Widgets {
                         file_window.visible_child is DisplayFile;
                     return true;
                 });
-            main_window_stack.bind_property("visible-child", context_revealer,
-                "reveal-child", BindingFlags.DEFAULT,
+            main_window_stack.bind_property("visible-child",
+                transfers_clear_revealer, "reveal-child", BindingFlags.DEFAULT,
                 (binding, src, ref target) => {
-                    var context_button =
-                        (Gtk.ToggleButton) context_revealer.get_child();
-                    var button_image = (Gtk.Image) context_button.get_child();
-                    target = context_button_logic(button_image);
+                    target = src.get_object() is Transfers;
                     return true;
                 });
 
@@ -318,15 +258,6 @@ namespace Valhalla.Widgets {
                 "reveal-child", BindingFlags.DEFAULT,
                 (binding, src, ref target) => {
                     target = src.get_object() is DisplayFile;
-                    return true;
-                });
-            file_window.bind_property("visible-child", context_revealer,
-                "reveal-child", BindingFlags.DEFAULT,
-                (binding, src, ref target) => {
-                    var context_button =
-                        (Gtk.ToggleButton) context_revealer.get_child();
-                    var button_image = (Gtk.Image) context_button.get_child();
-                    target = context_button_logic(button_image);
                     return true;
                 });
 
