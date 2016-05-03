@@ -10,17 +10,22 @@ License:	GPLv3
 URL:		https://github.com/Bob131/valhalla
 Source0:	%{url}/archive/%{commit}.zip
 
-BuildRequires:	vala vala-tools gtk3-devel libgee-devel sqlite-devel libnotify-devel zlib-devel libsoup-devel nautilus-devel
+BuildRequires:	vala vala-tools gtk3-devel libgee-devel sqlite-devel
+BuildRequires:  libnotify-devel zlib-devel libsoup-devel nautilus-devel
+BuildRequires:  gnome-desktop3-devel
 
 %description
 Utility for sharing files
+
 
 %package devel
 Summary:  Headers for developing Valhalla plugins
 Group:    Development/Libraries
 Requires: %{name}%{?_isa} = %{version}-%{release}
+
 %description devel
-Valhalla is a utility for sharing files. This package allows you to develop plugins for Valhalla
+Valhalla is a utility for sharing files. This package allows you to develop
+plugins for Valhalla
 
 
 %prep

@@ -23,6 +23,7 @@ PKG_CHECK_MODULES(valhalla_U, [
   gio-2.0 >= $GLIB_REQUIRED
   gio-unix-2.0 >= $GLIB_REQUIRED
   gtk+-3.0 >= $GTK_REQUIRED
+  gnome-desktop-3.0
   gmodule-2.0
   gee-0.8
   sqlite3

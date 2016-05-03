@@ -33,12 +33,14 @@ valhalla_VALAFLAGS = \
 	--pkg sqlite3 \
 	--pkg libsoup-2.4 \
 	--pkg gd-1.0 \
+	--pkg gnome-desktop-3 \
 	--pkg valhalla \
 	--gresources gresources.xml \
 	$(valhalla_U_VALAFLAGS)
 
 valhalla_CFLAGS = \
 	-DVALHALLA_MODULE_MODULEDIR=\"$(pkglibdir)\" \
+	-DGNOME_DESKTOP_USE_UNSTABLE_API \
 	-I $(top_srcdir)/libgd -I $(top_srcdir)/src/libvalhalla \
 	$(valhalla_U_CFLAGS)
 
