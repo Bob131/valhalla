@@ -1,4 +1,6 @@
+AM_MAKEFLAGS = --no-print-directory
 ACLOCAL_AMFLAGS=-I m4
+
 SUBDIRS=libgd data src src/modules
 
 EXTRA_DIST = \
