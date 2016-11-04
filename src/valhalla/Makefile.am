@@ -1,17 +1,14 @@
 bin_PROGRAMS = valhalla valhalla-screenshot
 
-
-gd.vapi:
-	$(AM_V_GEN) cp $(top_srcdir)/libgd/gd-1.0.vapi $(top_srcdir)/vapi/gd-1.0.vapi
+BUILT_SOURCES = gresources.c nautilus-extension.c
 
 resource_files = $(shell $(GLIB_COMPILE_RESOURCES) --generate-dependencies --sourcedir=$(srcdir) gresources.xml)
 gresources.c: gresources.xml $(resource_files)
 	$(AM_V_GEN) $(GLIB_COMPILE_RESOURCES) --target=$@ --sourcedir=$(srcdir) --generate-source $<
 
-BUILT_SOURCES = gd.vapi gresources.c
-
-
 valhalla_SOURCES = \
+	$(top_srcdir)/libgd/gd-1.0.vapi \
+	$(top_srcdir)/src/libvalhalla/valhalla.vapi \
 	gresources.c \
 	gtk/base-placeholder.vala \
 	gtk/file-widgets/details.vala \
@@ -36,9 +33,7 @@ valhalla_VALAFLAGS = \
 	--pkg posix \
 	--pkg sqlite3 \
 	--pkg libsoup-2.4 \
-	--pkg gd-1.0 \
 	--pkg gnome-desktop-3 \
-	--pkg valhalla \
 	--gresources gresources.xml \
 	$(valhalla_U_VALAFLAGS)
 
@@ -54,12 +49,10 @@ valhalla_LDADD = \
 	$(top_srcdir)/src/libvalhalla/libvalhalla.la \
 	$(valhalla_U_LIBS)
 
-
 valhalla_screenshot_SOURCES = valhalla-screenshot.vala
 valhalla_screenshot_VALAFLAGS = --pkg gio-2.0 $(valhalla_U_VALAFLAGS)
 valhalla_screenshot_CFLAGS = $(valhalla_CFLAGS)
 valhalla_screenshot_LDADD = $(valhalla_U_LIBS)
-
 
 nautilus_extensiondir = $(NAUTILUS_EXTENSION_DIR)
 nautilus_extension_LTLIBRARIES = libnautilus-valhalla.la
@@ -79,17 +72,7 @@ nautilus-extension.c:
 	$(AM_V_VALAC) $(VALAC) $(libnautilus_valhalla_la_VALAFLAGS) -C nautilus-extension.vala && \
 	$(SED) -i "s/(GType\*\* types/(const GType\*\* types/" nautilus-extension.c
 
-
-CLEANFILES = \
-	$(valhalla_SOURCES:%.vala=%.c) \
-	$(valhalla_screenshot_SOURCES:%.vala=%.c) \
-	$(libnautilus_valhalla_la_SOURCES) \
-	*.stamp \
-	*.stamp-t
-
-EXTRA_DIST = \
-	gresources.xml \
-	gtk/*.ui
-
 dist-hook:
 	cd $(distdir); rm -f $(CLEANFILES)
+
+-include $(top_srcdir)/git.mk

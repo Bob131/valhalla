@@ -11,3 +11,11 @@ EXTRA_DIST = \
 
 dist-hook:
 	cd $(distdir)/vapi; rm -f valhalla.vapi
+
+MAINTAINERCLEANFILES = \
+	$(GITIGNORE_MAINTAINERCLEANFILES_TOPLEVEL) \
+	$(GITIGNORE_MAINTAINERCLEANFILES_MAKEFILE_IN) \
+	$(GITIGNORE_MAINTAINERCLEANFILES_M4_LIBTOOL) \
+	m4/libgd.m4 m4/introspection.m4 m4/pkg.m4
+
+-include git.mk

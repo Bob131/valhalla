@@ -29,7 +29,7 @@ set -e
 srcdir=`dirname $0`
 test -z "$srcdir" && srcdir=.
 
-mkdir m4
+mkdir m4 || true
 aclocal -I m4 --install
 cp libgd/libgd.m4 m4
 autoreconf --force --install
