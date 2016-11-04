@@ -1,10 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
     <gresource prefix="/so/bob131/valhalla">
-        <file compressed="true">gtk/files.ui</file>
-        <file compressed="true">gtk/preferences.ui</file>
-        <file compressed="true">gtk/preferences-list-row.ui</file>
-        <file compressed="true">gtk/transfers.ui</file>
+        <file compressed="true">gtk/base-placeholder.ui</file>
+
+        <file compressed="true">gtk/file-widgets/details.ui</file>
+        <file compressed="true">gtk/file-widgets/list-placeholder.ui</file>
+        <file compressed="true">gtk/file-widgets/list-row.ui</file>
+        <file compressed="true">gtk/file-widgets/list.ui</file>
+
+        <file compressed="true">gtk/preferences/caution.ui</file>
+        <file compressed="true">gtk/preferences/control-builder.ui</file>
+        <file compressed="true">gtk/preferences/default-control.ui</file>
+        <file compressed="true">gtk/preferences/help-popover.ui</file>
+        <file compressed="true">gtk/preferences/module-row.ui</file>
+
+        <file compressed="true">gtk/transfers/list.ui</file>
+        <file compressed="true">gtk/transfers/list-placeholder.ui</file>
+        <file compressed="true">gtk/transfers/transfer-widget.ui</file>
+
+        <file compressed="true">gtk/screenshot-preview.ui</file>
+
         <file compressed="true">gtk/window.ui</file>
     </gresource>
 </gresources>

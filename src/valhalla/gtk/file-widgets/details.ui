@@ -6,32 +6,41 @@
     </widgets>
   </object>
 
-  <template class="ValhallaWidgetsDisplayFile" parent="GtkBox">
+  <template class="FileDetails" parent="GtkBox">
     <property name="orientation">vertical</property>
+
     <child>
       <object class="GtkBox">
         <property name="orientation">vertical</property>
         <property name="hexpand">true</property>
         <property name="vexpand">true</property>
         <property name="margin">6</property>
+
         <child>
           <object class="GtkLabel" id="title">
-            <property name="use-markup">true</property>
+            <property name="ellipsize">end</property>
+            <attributes>
+              <attribute name="weight" value="PANGO_WEIGHT_BOLD"/>
+            </attributes>
           </object>
         </child>
+
         <child>
           <object class="GtkStack" id="thumbnail_window">
             <property name="transition-type">crossfade</property>
             <property name="height-request">256</property>
             <property name="vexpand">true</property>
             <property name="valign">center</property>
+
             <child>
               <object class="GtkSpinner">
                 <property name="active">true</property>
               </object>
             </child>
+
           </object>
         </child>
+
         <child>
           <object class="GtkGrid" id="info_grid">
             <property name="column-spacing">12</property>
@@ -39,6 +48,7 @@
             <property name="halign">center</property>
             <property name="vexpand">true</property>
             <property name="valign">end</property>
+
             <child>
               <object class="GtkLinkButton" id="link"></object>
               <packing>
@@ -47,78 +57,93 @@
                 <property name="top-attach">1</property>
               </packing>
             </child>
+
           </object>
         </child>
+
       </object>
     </child>
+
     <child>
       <object class="GtkActionBar">
+
         <child>
           <object class="GtkButton" id="prev_button">
-            <style>
-              <class name="image-button"/>
-            </style>
+            <signal name="clicked" handler="switch_file"/>
+
             <child>
               <object class="GtkImage">
                 <property name="icon-name">go-previous-symbolic</property>
               </object>
             </child>
+
           </object>
         </child>
+
         <child>
           <object class="GtkBox">
             <property name="orientation">horizontal</property>
             <property name="spacing">6</property>
             <property name="hexpand">true</property>
             <property name="halign">center</property>
+
             <child>
               <object class="GtkButton" id="forget_button">
                 <property name="label">Forget</property>
+                <signal name="clicked" handler="forget"/>
+
                 <style>
                   <class name="destructive-action"/>
                 </style>
+
               </object>
             </child>
+
             <child>
-              <object class="GtkBox">
-                <property name="spacing">0</property>
-                <child>
-                  <object class="GtkButton" id="delete_button">
-                    <property name="label">Delete</property>
-                    <style>
-                      <class name="destructive-action"/>
-                    </style>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkRevealer" id="delete_spinner_reveal">
-                    <property name="transition-type">slide-right</property>
-                    <property name="reveal-child">false</property>
-                    <property name="margin-left">6</property>
-                    <child>
-                      <object class="GtkSpinner">
-                        <property name="active">true</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
+              <object class="GtkButton" id="delete_button">
+                <property name="label">Delete</property>
+                <signal name="clicked" handler="delete"/>
+
+                <style>
+                  <class name="destructive-action"/>
+                </style>
+
               </object>
             </child>
+
+            <child>
+              <object class="GtkRevealer" id="delete_spinner_reveal">
+                <property name="transition-type">slide-right</property>
+                <property name="reveal-child">false</property>
+                <property name="margin-left">6</property>
+
+                <child>
+                  <object class="GtkSpinner">
+                    <property name="active">true</property>
+                  </object>
+                </child>
+
+              </object>
+            </child>
+
           </object>
         </child>
+
         <child>
           <object class="GtkButton" id="next_button">
-            <style>
-              <class name="image-button"/>
-            </style>
+            <signal name="clicked" handler="switch_file"/>
+
             <child>
               <object class="GtkImage">
                 <property name="icon-name">go-next-symbolic</property>
               </object>
             </child>
+
           </object>
         </child>
+
       </object>
     </child>
+
   </template>
 </interface>

@@ -13,9 +13,13 @@ BUILT_SOURCES = gd.vapi gresources.c
 
 valhalla_SOURCES = \
 	gresources.c \
-	gtk/files.vala \
-	gtk/preferences.vala \
-	gtk/transfers.vala \
+	gtk/base-placeholder.vala \
+	gtk/file-widgets/details.vala \
+	gtk/file-widgets/list-detail-stack.vala \
+	gtk/file-widgets/list.vala \
+	gtk/preferences/control-builder.vala \
+	gtk/transfers/transfers.vala \
+	gtk/screenshot-preview.vala \
 	gtk/window.vala \
 	database.vala \
 	loader.vala \
@@ -39,7 +43,7 @@ valhalla_VALAFLAGS = \
 	$(valhalla_U_VALAFLAGS)
 
 valhalla_CFLAGS = \
-	-DVALHALLA_MODULE_MODULEDIR=\"$(pkglibdir)\" \
+	-DMODULEDIR=\"$(pkglibdir)\" \
 	-DGNOME_DESKTOP_USE_UNSTABLE_API \
 	-I $(top_srcdir)/libgd -I $(top_srcdir)/src/libvalhalla \
 	$(valhalla_U_CFLAGS)

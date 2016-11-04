@@ -1,0 +1,71 @@
+<interface>
+  <template class="ScreenshotPreview" parent="GtkDialog">
+    <property name="title">Screenshot Preview</property>
+
+    <child type="titlebar">
+      <object class="GtkHeaderBar">
+
+        <child>
+          <object class="GtkButton" id="cancel_button">
+            <property name="label">Cancel</property>
+          </object>
+        </child>
+
+        <child>
+          <object class="GtkBox">
+            <property name="spacing">6</property>
+
+            <child>
+              <object class="GtkButton">
+                <signal name="clicked" handler="save_as"/>
+
+                <child>
+                  <object class="GtkImage">
+                    <property name="icon-name">document-save-as-symbolic</property>
+                  </object>
+                </child>
+
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkSeparator">
+                <property name="orientation">vertical</property>
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkButton" id="upload_button">
+                <property name="label">Upload</property>
+                <property name="can-default">true</property>
+              </object>
+            </child>
+
+          </object>
+
+          <packing>
+            <property name="pack-type">end</property>
+          </packing>
+        </child>
+
+      </object>
+    </child>
+
+    <action-widgets>
+      <action-widget response="cancel">cancel_button</action-widget>
+      <action-widget response="ok" default="true">upload_button</action-widget>
+    </action-widgets>
+
+    <child internal-child="vbox">
+      <object class="GtkBox">
+        <property name="border-width">0</property>
+
+        <child>
+          <object class="GtkImage" id="image"></object>
+        </child>
+
+      </object>
+    </child>
+
+  </template>
+</interface>

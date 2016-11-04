@@ -23,7 +23,7 @@ SOFTWARE. */
 // adapted from https://git.gnome.org/browse/gnome-screenshot/tree/src/screenshot-area-selection.c
 
 // TODO: give window focus before capture
-namespace Valhalla.Screenshot {
+namespace Screenshot {
     private delegate void Func();
 
 

@@ -1,0 +1,12 @@
+<interface>
+  <template class="FileList" parent="GtkScrolledWindow">
+    <property name="hscrollbar-policy">never</property>
+
+    <child>
+      <object class="GtkListBox" id="list">
+        <property name="selection-mode">none</property>
+      </object>
+    </child>
+
+  </template>
+</interface>

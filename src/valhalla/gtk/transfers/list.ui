@@ -1,0 +1,11 @@
+<interface>
+  <template class="TransferList" parent="GtkScrolledWindow">
+    <property name="hscrollbar-policy">never</property>
+    <property name="expand">true</property>
+
+    <child>
+      <object class="GtkListBox" id="listbox"></object>
+    </child>
+
+  </template>
+</interface>

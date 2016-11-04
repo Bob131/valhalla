@@ -1,0 +1,20 @@
+<interface>
+  <template class="DefaultControl" parent="GtkBox">
+    <property name="orientation">vertical</property>
+    <property name="spacing">6</property>
+
+    <child>
+      <object class="GtkLabel" id="label">
+        <property name="halign">start</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkEntry" id="entry">
+        <property name="margin-left">12</property>
+        <property name="hexpand">true</property>
+      </object>
+    </child>
+
+  </template>
+</interface>

@@ -1,0 +1,80 @@
+<interface>
+  <template class="TransferWidget" parent="GtkListBoxRow">
+    <child>
+      <object class="GtkGrid">
+        <property name="margin">12</property>
+        <property name="margin-top">6</property>
+        <property name="column-spacing">6</property>
+        <property name="row-spacing">6</property>
+
+        <child>
+          <object class="GtkLabel" id="file_name_label">
+            <property name="ellipsize">end</property>
+            <property name="hexpand">true</property>
+            <property name="halign">start</property>
+          </object>
+          <packing>
+            <property name="left_attach">0</property>
+            <property name="top_attach">0</property>
+            <property name="width">1</property>
+            <property name="height">1</property>
+          </packing>
+        </child>
+
+        <child>
+          <object class="GtkButton" id="copy_button">
+            <property name="sensitive">false</property>
+            <signal name="clicked" handler="copy"/>
+
+            <child>
+              <object class="GtkImage">
+                <property name="icon-name">edit-copy-symbolic</property>
+              </object>
+            </child>
+
+          </object>
+          <packing>
+            <property name="left_attach">1</property>
+            <property name="top_attach">0</property>
+            <property name="width">1</property>
+            <property name="height">1</property>
+          </packing>
+        </child>
+
+        <child>
+          <object class="GtkButton" id="cancel_button">
+            <property name="sensitive">false</property>
+            <signal name="clicked" handler="cancel"/>
+
+            <child>
+              <object class="GtkImage">
+                <property name="icon-name">edit-delete-symbolic</property>
+              </object>
+            </child>
+
+          </object>
+          <packing>
+            <property name="left_attach">2</property>
+            <property name="top_attach">0</property>
+            <property name="width">1</property>
+            <property name="height">1</property>
+          </packing>
+        </child>
+
+        <child>
+          <object class="GtkProgressBar" id="progress_bar">
+            <property name="show-text">true</property>
+          </object>
+          <packing>
+            <property name="left_attach">0</property>
+            <property name="top_attach">1</property>
+            <property name="width">3</property>
+            <property name="height">1</property>
+          </packing>
+        </child>
+
+      </object>
+    </child>
+
+  </template>
+</interface>

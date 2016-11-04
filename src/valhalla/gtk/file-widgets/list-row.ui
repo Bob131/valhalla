@@ -1,0 +1,39 @@
+<interface>
+  <template class="FileListRow" parent="GtkListBoxRow">
+    <child>
+      <object class="GtkEventBox">
+        <property name="events">button-press-mask</property>
+
+        <child>
+          <object class="GtkBox">
+            <property name="spacing">6</property>
+            <property name="margin">12</property>
+
+            <child>
+              <object class="GtkImage" id="icon">
+                <!-- GTK_ICON_SIZE_MENU -->
+                <property name="icon-size">1</property>
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkLabel" id="label">
+                <property name="hexpand">true</property>
+                <property name="halign">start</property>
+                <property name="ellipsize">end</property>
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkLabel" id="date">
+                <property name="halign">end</property>
+              </object>
+            </child>
+
+          </object>
+        </child>
+
+      </object>
+    </child>
+  </template>
+</interface>

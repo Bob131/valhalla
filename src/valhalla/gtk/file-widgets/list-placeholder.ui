@@ -1,0 +1,6 @@
+<interface>
+  <template class="FileListPlaceholder" parent="BasePlaceholder">
+    <property name="icon">view-grid-symbolic</property>
+    <property name="text">You haven't uploaded any files yet</property>
+  </template>
+</interface>

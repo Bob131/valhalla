@@ -1,0 +1,6 @@
+<interface>
+  <template class="TransferListPlaceholder" parent="BasePlaceholder">
+    <property name="icon">network-idle-symbolic</property>
+    <property name="text">No transfers pending</property>
+  </template>
+</interface>

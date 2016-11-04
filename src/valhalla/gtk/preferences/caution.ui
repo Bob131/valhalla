@@ -1,0 +1,21 @@
+<interface>
+  <template class="CautionWidget" parent="GtkBox">
+    <property name="spacing">6</property>
+    <property name="halign">center</property>
+
+    <child>
+      <object class="GtkImage">
+        <property name="icon-name">dialog-warning</property>
+        <!-- GTK_ICON_SIZE_LARGE_TOOLBAR -->
+        <property name="icon-size">3</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkLabel">
+        <property name="label">This module does not support file deletion</property>
+      </object>
+    </child>
+
+  </template>
+</interface>

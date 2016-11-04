@@ -1,24 +1,30 @@
 <interface>
-  <template class="ValhallaWidgetsPreferences" parent="GtkBox">
+  <template class="ControlBuilder" parent="GtkBox">
     <property name="orientation">horizontal</property>
+
     <child>
       <object class="GtkScrolledWindow">
         <property name="hscrollbar-policy">never</property>
+
         <child>
           <object class="GtkListBox" id="modules">
             <property name="vexpand">True</property>
             <signal name="row_selected" handler="module_selected"/>
           </object>
         </child>
+
       </object>
     </child>
+
     <child>
       <object class="GtkBox">
         <property name="orientation">vertical</property>
         <property name="margin">6</property>
+
         <child>
           <object class="GtkScrolledWindow">
             <property name="hscrollbar-policy">never</property>
+
             <child>
               <object class="GtkBox" id="controls">
                 <property name="orientation">vertical</property>
@@ -27,8 +33,10 @@
                 <property name="margin">12</property>
               </object>
             </child>
+
           </object>
         </child>
+
         <child>
           <object class="GtkButton"> <!--TODO-->
             <property name="valign">end</property>
@@ -36,7 +44,9 @@
             <property name="label">Application settings</property>
           </object>
         </child>
+
       </object>
     </child>
+
   </template>
 </interface>

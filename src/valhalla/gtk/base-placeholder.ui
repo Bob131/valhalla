@@ -1,0 +1,21 @@
+<interface>
+  <template class="BasePlaceholder" parent="GtkBox">
+    <property name="orientation">vertical</property>
+    <property name="spacing">6</property>
+    <property name="halign">center</property>
+    <property name="valign">center</property>
+
+    <style>
+      <class name="dim-label"/>
+    </style>
+
+    <child>
+      <object class="GtkImage" id="image"></object>
+    </child>
+
+    <child>
+      <object class="GtkLabel" id="label"></object>
+    </child>
+
+  </template>
+</interface>
