@@ -6,7 +6,7 @@ AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 AM_SILENT_RULES([yes])
 
-AM_PROG_VALAC([0.28])
+AM_PROG_VALAC([0.33.1])
 AM_PROG_CC_C_O
 
 CFLAGS="$CFLAGS -w"
@@ -16,7 +16,7 @@ dnl Dependencies
 dnl ###########################################################################
 
 GLIB_REQUIRED=2.40.0
-GTK_REQUIRED=3.20
+GTK_REQUIRED=3.22
 AC_SUBST([GLIB_REQUIRED])
 
 PKG_CHECK_MODULES(valhalla_U, [
