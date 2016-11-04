@@ -1,4 +1,4 @@
-AC_INIT([valhalla],[0.0])
+AC_INIT([valhalla], [0.1])
 
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
@@ -6,7 +6,7 @@ AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 AM_SILENT_RULES([yes])
 
-AM_PROG_VALAC([0.24])
+AM_PROG_VALAC([0.28])
 AM_PROG_CC_C_O
 
 CFLAGS="$CFLAGS -w"
@@ -57,6 +57,7 @@ dnl ###########################################################################
 
 AC_CONFIG_FILES([
 Makefile
+valhalla.spec
 libgd/Makefile
 data/Makefile
 src/Makefile

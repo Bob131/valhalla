@@ -1,14 +1,12 @@
-%global shortcommit %(c=%{commit}; echo ${c:0:7})
-
 Name:		valhalla
-Version:	0
-Release:	%{date}git%{shortcommit}%{?dist}
+Version:	@VERSION@
+Release:	1
 Summary:	File upload manager
 
 Group:		Applications/Internet
 License:	GPLv3
 URL:		https://github.com/Bob131/valhalla
-Source0:	%{url}/archive/%{commit}.zip
+Source0:	%{url}/archive/%{version}.zip
 
 BuildRequires:	vala vala-tools gtk3-devel libgee-devel sqlite-devel
 BuildRequires:  libnotify-devel zlib-devel libsoup-devel nautilus-devel
@@ -29,7 +27,7 @@ plugins for Valhalla
 
 
 %prep
-%autosetup -n %{name}-%{commit}
+%autosetup
 
 %build
 NOCONFIGURE=1 ./autogen.sh
