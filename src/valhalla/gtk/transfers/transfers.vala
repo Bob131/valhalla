@@ -226,7 +226,7 @@ class TransferList : Gtk.ScrolledWindow {
 
     construct {
         listbox.row_activated.connect((row) => {
-            var transfer = (TransferWidget) row.get_child();
+            var transfer = (TransferWidget) row;
             if (transfer.status == TransferStatus.DONE)
                 try {
                     AppInfo.launch_default_for_uri(
